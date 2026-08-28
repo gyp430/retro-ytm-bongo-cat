@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "setup": "python -m pip install -r py/requirements.txt",
-    "dist:sidecar": "pyinstaller --noconfirm --clean retro-sidecar.spec",
+    "dist:sidecar": "python -m PyInstaller --noconfirm --clean retro-sidecar.spec",
     "dist": "npm run dist:sidecar && electron-builder --win",
     "pack": "electron-builder --dir",
     "postinstall": "node -e \"console.log('\\nNow run: npm run setup   (installs the Python side)\\n')\""

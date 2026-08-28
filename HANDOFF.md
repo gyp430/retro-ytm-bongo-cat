@@ -1260,7 +1260,8 @@ self-extracting exe — no Python/Node on the target). Full QA instructions:
   `renderer/**` (disk fallback) + `package.json` → `app.asar`.
   `extraResources` copies `dist/server/` → `resources/sidecar/`. `win.target` =
   `portable`, `artifactName RetroYTM-BongoCat-${version}-portable.exe`.
-  Scripts: `npm run dist:sidecar` (pyinstaller), `npm run dist`
+  Scripts: `npm run dist:sidecar` (`python -m PyInstaller …` — module form, not
+  the bare `pyinstaller` shim which isn't on PATH here), `npm run dist`
   (sidecar → electron-builder), `npm run pack` (unpacked).
 - **`electron/main.js`** — `startPython()`: if `app.isPackaged`, `spawnFrozenServer()`
   runs `process.resourcesPath/sidecar/server.exe` (falls back to the system-Python

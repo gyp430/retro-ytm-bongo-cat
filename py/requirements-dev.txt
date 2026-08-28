@@ -1,0 +1,4 @@
+# Build-only Python deps (not needed to run from source, only to package).
+#   pip install -r py/requirements-dev.txt
+# Used by `npm run dist:sidecar` → retro-sidecar.spec.
+pyinstaller>=6.11

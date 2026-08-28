@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'self';
+           script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com;
+           frame-src https://www.youtube.com https://www.youtube-nocookie.com;
+           connect-src 'self' http://127.0.0.1:8765 http://localhost:8765;
+           img-src 'self' data: https:;
+           media-src 'self' blob:;
+           style-src 'self' 'unsafe-inline';" />
+<title>Retro YTM Bongo Cat</title>
+<script>
+  /* apply the saved theme before first paint to avoid a colour flash */
+  try {
+    var _tv = JSON.parse(localStorage.getItem('retro.themeVars') || 'null');
+    if (_tv) {
+      var _s = document.documentElement.style;
+      for (var _k in _tv) _s.setProperty(_k, _tv[_k]);
+    }
+    /* mirror the theme id so per-theme ornament CSS applies before first paint */
+    document.documentElement.setAttribute(
+      'data-theme', localStorage.getItem('retro.theme') || 'classic');
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="css/winamp.css" />
+<link rel="stylesheet" href="css/game-skins.css" />
+</head>
+<body>
+  <!-- per-theme decorative frame (corner brackets + side rails); CSS in
+       ornaments.css only paints these for the six game themes -->
+  <div id="ornaments" aria-hidden="true">
+    <i class="orn orn-tl"></i><i class="orn orn-tr"></i>
+    <i class="orn orn-bl"></i><i class="orn orn-br"></i>
+    <i class="orn orn-l"></i><i class="orn orn-r"></i>
+  </div>
+
+  <!-- ===== MAIN PLAYER ===== -->
+  <div id="main" class="window">
+    <div id="titlebar" class="titlebar">
+      <span class="title-text">R E T R O &nbsp;&bull;&nbsp; Y T M &nbsp;&bull;&nbsp; B O N G O &nbsp; C A T</span>
+      <div class="title-btns no-drag">
+        <button id="btn-theme" title="Themes / colours">◈</button>
+        <button id="btn-video" title="Video window (YouTube)">▣</button>
+        <button id="btn-signin" title="Connect / switch Google account">◍</button>
+        <button id="btn-settings" title="Settings">⚙</button>
+        <button id="btn-min" title="Minimise">_</button>
+        <button id="btn-close" title="Close">×</button>
+      </div>
+    </div>
+
+    <div id="main-display" class="display">
+      <canvas id="vis" width="152" height="32"></canvas>
+
+      <div class="readout">
+        <div id="lcd-time" class="lcd">--:--</div>
+
+        <!-- bongo cat — fixed colours in winamp.css, never touched by themes -->
+        <div id="cat" aria-hidden="true" title="bongo">
+          <svg viewBox="0 0 130 84" xmlns="http://www.w3.org/2000/svg">
+            <path class="ink" d="M2 58 H128"/>
+            <path class="keys" d="M12 58V71 M22 58V71 M32 58V71 M42 58V71 M52 58V71 M62 58V71 M72 58V71 M82 58V71 M92 58V71 M102 58V71 M112 58V71 M120 58V71"/>
+            <rect class="blackkey" x="16" y="58" width="5" height="8"/>
+            <rect class="blackkey" x="37" y="58" width="5" height="8"/>
+            <rect class="blackkey" x="57" y="58" width="5" height="8"/>
+            <rect class="blackkey" x="77" y="58" width="5" height="8"/>
+            <rect class="blackkey" x="97" y="58" width="5" height="8"/>
+            <g class="keybed keybed-l">
+              <rect class="key" x="20" y="57" width="7" height="14" rx="1"/>
+              <rect class="key" x="28" y="57" width="7" height="14" rx="1"/>
+              <rect class="key" x="36" y="57" width="7" height="14" rx="1"/>
+            </g>
+            <g class="keybed keybed-r">
+              <rect class="key" x="84" y="57" width="7" height="14" rx="1"/>
+              <rect class="key" x="92" y="57" width="7" height="14" rx="1"/>
+              <rect class="key" x="100" y="57" width="7" height="14" rx="1"/>
+            </g>
+            <path class="ink" d="M33 58 C33 11 97 11 97 58"/>
+            <path class="ink" d="M45 18 L41 6 L55 14"/>
+            <path class="ink" d="M85 18 L89 6 L75 14"/>
+            <ellipse class="sol" cx="55" cy="33" rx="3.4" ry="5"/>
+            <ellipse class="sol" cx="77" cy="33" rx="3.4" ry="5"/>
+            <path class="ink" d="M60 41 q3 3 6 0 q3 3 6 0"/>
+            <path class="blush" d="M46 38v5 M49 38v5 M83 38v5 M86 38v5"/>
+            <path class="ink" d="M43 34l-13 -2 M43 38l-13 3 M89 34l13 -2 M89 38l13 3"/>
+            <g class="paw-l">
+              <path class="ink" d="M27 59q-4 -1 -4 -6q0 -6 9 -6q10 0 10 6q0 5 -4 6"/>
+              <path class="ink" d="M28 59v-4 M33 59v-4 M38 59v-4"/>
+            </g>
+            <g class="paw-r">
+              <path class="ink" d="M92 59q-4 -1 -4 -6q0 -6 9 -6q10 0 10 6q0 5 -4 6"/>
+              <path class="ink" d="M93 59v-4 M98 59v-4 M103 59v-4"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="meta">
+          <span id="kbps">---</span> kbps
+          <span id="khz">--</span> kHz
+          <span id="chan">stereo</span>
+        </div>
+      </div>
+
+      <div id="marquee" class="marquee">
+        <span id="track-title">◄► YouTube Music — not connected</span>
+      </div>
+
+      <div class="sliders">
+        <div id="posbar" class="bar no-drag" title="Seek">
+          <div id="pos-fill" class="fill"></div>
+          <div id="pos-thumb" class="thumb"></div>
+        </div>
+        <div id="volbar" class="bar bar--vol no-drag" title="Volume">
+          <div id="vol-fill" class="fill"></div>
+          <div id="vol-thumb" class="thumb"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="transport no-drag">
+      <button id="tp-prev" class="tp" title="Previous">◄◄</button>
+      <button id="tp-play" class="tp" title="Play">►</button>
+      <button id="tp-pause" class="tp" title="Pause">❚❚</button>
+      <button id="tp-stop" class="tp" title="Stop">■</button>
+      <button id="tp-next" class="tp" title="Next">►►</button>
+      <button id="tp-dl" class="tp" title="Download this track (yt-dlp)" style="display:none">⭳</button>
+      <button id="tp-fav" class="tp toggle" title="Add to Liked Music" style="display:none">☆</button>
+      <span class="spacer"></span>
+      <button id="tp-shuffle" class="tp toggle" title="Shuffle">⤨</button>
+      <button id="tp-repeat" class="tp toggle" title="Repeat">↻</button>
+      <button id="tp-radio" class="tp toggle" title="When the queue runs out, keep adding songs in a similar style">≈</button>
+    </div>
+  </div>
+
+  <!-- drag up/down to trade height between the player top and the editor -->
+  <div id="split-main" class="hsplitter no-drag"
+       title="Drag to resize — double-click to reset"></div>
+
+  <!-- ===== PLAYLIST EDITOR ===== -->
+  <div id="pled" class="window">
+    <div class="titlebar titlebar--sub">
+      <span class="title-text">PLAYLIST EDITOR</span>
+    </div>
+
+    <div class="pled-body">
+      <aside id="pl-sidebar" class="pl-sidebar">
+        <div id="pl-lib-section">
+          <div class="pl-sidebar-head head-tools">
+            <span>PLAYLISTS</span>
+            <button id="pl-add" title="New playlist">＋</button>
+          </div>
+          <ul id="pl-names"></ul>
+        </div>
+        <div id="recs-section">
+          <div class="pl-sidebar-head head-tools">
+            <span>FOR YOU</span>
+            <button id="recs-refresh" title="Refresh recommendations">⟳</button>
+          </div>
+          <ul id="recs-names"></ul>
+        </div>
+      </aside>
+      <div id="split-sidebar" class="splitter no-drag" title="Drag to resize"></div>
+
+      <div class="pl-main">
+        <div id="pl-search" class="pl-search no-drag">
+          <input id="q" type="text" placeholder="search music + video…" spellcheck="false" />
+          <button id="q-mode" title="Search scope — click to cycle All / Music / Video">A</button>
+          <button id="q-go">go</button>
+        </div>
+        <ol id="pl-tracks" class="pl-tracks"></ol>
+        <div id="pl-foot" class="pl-foot">0 tracks</div>
+      </div>
+
+      <div id="split-queue" class="splitter no-drag" title="Drag to resize"></div>
+      <aside id="queue-panel" class="queue-panel no-drag">
+        <div id="queue-section">
+          <div class="qp-head">
+            <span>QUEUE</span>
+            <button id="q-clear" title="Clear all but the playing track">clear</button>
+          </div>
+          <ol id="queue-list" class="queue-list"></ol>
+          <div id="queue-foot" class="qp-foot">empty</div>
+        </div>
+
+        <div id="aq-section">
+          <div class="qp-head qp-head--lists">
+            <span>ARTIST MIX</span>
+            <button id="aq-toggle" title="Shuffle songs from these artists into the queue as it runs low">mix</button>
+          </div>
+          <div class="aq-add">
+            <input id="aq-input" type="text" placeholder="add artist…" spellcheck="false" />
+            <button id="aq-add-btn" title="Search &amp; add artist">＋</button>
+          </div>
+          <ul id="aq-list" class="aq-list"></ul>
+          <div id="aq-foot" class="qp-foot">search or drag favourite artists here</div>
+        </div>
+
+        <div id="sl-section">
+          <div class="qp-head qp-head--lists">
+            <span>SESSION LISTS</span>
+            <button id="sl-save" title="Save the current queue as a new list">save queue</button>
+          </div>
+          <div class="sl-drawer">
+            <select id="sl-select" class="sl-select"><option value="">— no lists —</option></select>
+            <div class="sl-toolbar">
+              <button id="sl-load" title="Show this list in the track pane">load</button>
+              <button id="sl-play" title="Play this list now">play</button>
+              <button id="sl-rename">rename</button>
+              <button id="sl-del">del</button>
+              <button id="sl-push" title="Create as a real YouTube Music playlist">▲ YTM</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div id="pled-toggles" class="pled-toggles no-drag">
+      <span class="pt-label">show</span>
+      <button data-panel="sidebar">playlists</button>
+      <button data-panel="recs">for you</button>
+      <button data-panel="search">search</button>
+      <button data-panel="queue">queue</button>
+      <button data-panel="artists">artist mix</button>
+      <button data-panel="lists">lists</button>
+      <button id="keys-btn" type="button">keybinds</button>
+    </div>
+  </div>
+
+  <!-- right-click menu (populated by app.js) -->
+  <div id="ctx-menu" class="ctx-menu hidden no-drag"></div>
+  <div id="toast" class="toast"></div>
+
+  <!-- prompt/confirm dialog (Electron has no window.prompt) -->
+  <div id="modal" class="modal hidden no-drag">
+    <div class="modal-card">
+      <div id="modal-msg" class="modal-msg"></div>
+      <input id="modal-input" type="text" class="modal-input" spellcheck="false" />
+      <div class="modal-btns">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- hidden YouTube player -->
+  <div id="yt-host"><div id="yt"></div></div>
+
+  <!-- hidden player for imported local audio files -->
+  <audio id="local-audio" preload="auto"></audio>
+  <input id="file-input" type="file" accept="audio/*,.mp3,.m4a,.flac,.ogg,.oga,.opus,.wav,.aac"
+         multiple hidden />
+
+  <!-- drag-and-drop hint (shown while dragging audio files over the window) -->
+  <div id="drop-zone" class="drop-zone hidden no-drag">
+    <div class="drop-inner">▾ &nbsp;Drop audio files to play&nbsp; ▾</div>
+  </div>
+
+  <!-- theme picker flyout (populated by themes.js) -->
+  <div id="theme-pop" class="theme-pop hidden no-drag"></div>
+
+  <!-- settings flyout -->
+  <div id="settings-pop" class="theme-pop hidden no-drag">
+    <h3>Playback</h3>
+    <label class="set-row">
+      <span>Volume <span class="set-hint">(startup default)</span></span>
+      <input type="range" id="set-vol" min="0" max="100" />
+    </label>
+    <label class="set-row">
+      <span>Can't-be-embedded tracks (101/150)</span>
+      <select id="set-blocked">
+        <option value="stream">Play them — fetch audio (yt-dlp)</option>
+        <option value="skip">Skip them</option>
+      </select>
+    </label>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="set-stream-all" /> <span>Stream everything</span>
+    </label>
+    <p class="set-hint">Route every track through yt-dlp + the local player so the
+      real-FFT visualizer &amp; beat-reactive bongo cat work on all of them.
+      Trades Premium audio quality for the live spectrum; first play of each
+      track waits on a fetch (the next one is pre-warmed).</p>
+    <button class="set-btn" id="set-zoom">Reset window zoom to 100%</button>
+
+    <h3>Visualizer</h3>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="set-vis-on" /> <span>Show visualizer</span>
+    </label>
+    <label class="set-row">
+      <span>Mode</span>
+      <select id="set-vis-mode">
+        <option value="auto">Auto — real FFT for local files</option>
+        <option value="sim">Always simulated</option>
+      </select>
+    </label>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="set-cat" /> <span>Show bongo cat</span>
+    </label>
+
+    <h3>Tuning &mdash; bongo cat</h3>
+    <label class="set-row">
+      <span>Beat sensitivity <span class="set-hint">more taps &rarr;</span></span>
+      <input type="range" id="tune-beat" min="0" max="100" />
+    </label>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="tune-groove" /> <span>Groove fill (keep time in gaps)</span>
+    </label>
+
+    <h3>Tuning &mdash; equalizer</h3>
+    <label class="set-row">
+      <span>Bar height</span>
+      <input type="range" id="tune-eq-h" min="35" max="85" />
+    </label>
+    <label class="set-row">
+      <span>Centre focus</span>
+      <input type="range" id="tune-eq-c" min="0" max="80" />
+    </label>
+    <label class="set-row">
+      <span>Bottom gap</span>
+      <input type="range" id="tune-eq-b" min="5" max="40" />
+    </label>
+    <label class="set-row">
+      <span>Glow</span>
+      <input type="range" id="tune-eq-g" min="0" max="200" />
+    </label>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="tune-eq-caps" /> <span>Peak caps</span>
+    </label>
+    <button class="set-btn" id="tune-reset">Reset tuning to defaults</button>
+
+    <h3>Downloads</h3>
+    <div class="set-row">
+      <span>Save folder</span>
+      <div class="set-path" id="set-dl-dir" title="">Downloads / Retro YTM</div>
+    </div>
+    <button class="set-btn" id="set-dl-pick">Change download folder&hellip;</button>
+    <button class="set-btn" id="set-dl-reset">Use default folder</button>
+
+    <h3>Stream cache</h3>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="set-cache-keep" /> <span>Keep between sessions</span>
+    </label>
+    <label class="set-row">
+      <span>Max size</span>
+      <select id="set-cache-cap">
+        <option value="250">250 MB</option>
+        <option value="500">500 MB</option>
+        <option value="1000">1 GB</option>
+        <option value="2000">2 GB</option>
+      </select>
+    </label>
+    <div class="set-row"><span>In use</span><div class="set-path" id="set-cache-size">&mdash;</div></div>
+    <button class="set-btn" id="set-cache-clear">Clear cached audio now</button>
+    <p class="set-hint">Audio fetched to play embed-blocked (101/150) tracks.
+      Default: wiped every startup &amp; exit. Kept: oldest-played evicted once
+      past the cap.</p>
+
+    <h3>Statistics</h3>
+    <button class="set-btn" id="set-stats">Open statistics window&hellip;</button>
+    <p class="set-hint">Tracks what you play here (30s or 50% = a play). Opens in
+      its own window so the player stays light.</p>
+
+    <h3>Local files</h3>
+    <button class="set-btn" id="set-import">Import audio files&hellip;</button>
+    <ul id="set-local-list" class="set-local"></ul>
+    <button class="set-btn" id="set-local-clear">Clear imported files</button>
+    <p class="set-hint">Tip: you can also drag audio files anywhere onto the
+      window. Imports are session-only — gone on restart.</p>
+  </div>
+
+  <!-- ===== KEYBINDS FLYOUT (pops up from the #pled-toggles bar) ===== -->
+  <div id="keys-pop" class="theme-pop hidden no-drag"></div>
+
+  <!-- ===== FIRST-RUN AUTH ===== -->
+  <div id="auth" class="overlay hidden">
+    <div class="auth-card no-drag">
+      <h2>Connect YouTube Music</h2>
+      <p class="auth-lead">
+        Sign in with Google in the popup. That's the whole setup — it also
+        switches on your <b>Premium</b> (no ads, background play).
+      </p>
+      <button id="auth-google" class="big-btn">Sign in with Google</button>
+      <p id="auth-msg"></p>
+      <details class="auth-adv">
+        <summary>Advanced: paste request headers instead</summary>
+        <textarea id="auth-headers" rows="6"
+          placeholder="cookie: ...&#10;x-goog-authuser: 0&#10;authorization: SAPISIDHASH ..."></textarea>
+        <button id="auth-connect">Connect with headers</button>
+      </details>
+    </div>
+  </div>
+
+  <!-- order matters: define window.onYouTubeIframeAPIReady (in player.js)
+       BEFORE the IFrame API script loads, or the callback can be missed -->
+  <script src="js/themes.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/app.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

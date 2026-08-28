@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'self';
+           script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com;
+           frame-src https://www.youtube.com https://www.youtube-nocookie.com;
+           connect-src 'self' http://127.0.0.1:8765 http://localhost:8765;
+           img-src 'self' data: https:;
+           style-src 'self' 'unsafe-inline';" />
+<title>Retro Video</title>
+<script>
+  /* apply the saved theme before first paint (shared with the main window) */
+  try {
+    var _tv = JSON.parse(localStorage.getItem('retro.themeVars') || 'null');
+    if (_tv) {
+      var _s = document.documentElement.style;
+      for (var _k in _tv) _s.setProperty(_k, _tv[_k]);
+    }
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="css/video.css" />
+</head>
+<body>
+  <div id="crt-win" class="crt-win">
+    <div id="crt-titlebar" class="crt-titlebar">
+      <span class="crt-title-text">R E T R O &nbsp;&bull;&nbsp; V I D E O</span>
+      <div class="crt-title-btns no-drag">
+        <button id="crt-dock" class="on" title="Detach from main window">◧</button>
+        <button id="crt-min" title="Minimise">_</button>
+        <button id="crt-close" title="Close">×</button>
+      </div>
+    </div>
+
+    <div class="crt-search no-drag">
+      <input id="v-q" type="text" placeholder="search youtube…" spellcheck="false" />
+      <button id="v-go">go</button>
+    </div>
+
+    <div class="crt-stage">
+      <div class="crt-bezel">
+        <div id="crt-screen" class="crt-screen">
+          <div id="vid"></div>
+          <div class="crt-noise" id="crt-noise">
+            <div class="crt-noise-txt">◄► NO SIGNAL</div>
+          </div>
+          <div class="crt-scan"></div>
+          <div class="crt-vignette"></div>
+          <div class="crt-flicker"></div>
+        </div>
+        <div class="crt-badge">
+          <span class="crt-led" id="crt-led"></span>
+          <span class="crt-brand">RETRO&#8209;VISION&nbsp;IV</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="v-now" class="crt-now">◄► nothing playing</div>
+
+    <ol id="v-results" class="crt-results"></ol>
+    <div id="v-foot" class="crt-foot"></div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/video.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta
+  http-equiv="Content-Security-Policy"
+  content="default-src 'self';
+           script-src 'self' 'unsafe-inline';
+           connect-src 'self' http://127.0.0.1:8765 http://localhost:8765;
+           img-src 'self' data:;
+           style-src 'self' 'unsafe-inline';" />
+<title>Retro YTM — Statistics</title>
+<script>
+  /* apply the saved theme before first paint (shared with the main window) */
+  try {
+    var _tv = JSON.parse(localStorage.getItem('retro.themeVars') || 'null');
+    if (_tv) {
+      var _s = document.documentElement.style;
+      for (var _k in _tv) _s.setProperty(_k, _tv[_k]);
+    }
+  } catch (e) {}
+</script>
+<link rel="stylesheet" href="css/stats.css" />
+</head>
+<body>
+  <div class="st-win">
+    <div class="st-head">
+      <span class="st-title">R E T R O &nbsp;&bull;&nbsp; S T A T S</span>
+      <span class="st-sub" id="st-updated"></span>
+    </div>
+
+    <div id="st-empty" class="st-empty hidden">
+      Nothing tracked yet. Play a few songs in the player (30&nbsp;s or 50&nbsp;%
+      of a track counts as a play) and this window fills in — it updates live.
+    </div>
+
+    <div id="st-body" class="st-body">
+      <div class="st-tiles" id="st-tiles"></div>
+
+      <section class="st-card">
+        <div class="st-card-head"><span>PLAYS PER DAY</span><span class="st-hint">last 30 days — click a bar to play that day</span></div>
+        <canvas id="st-daily" class="st-daily" width="700" height="120"></canvas>
+      </section>
+
+      <div class="st-cols">
+        <section class="st-card">
+          <div class="st-card-head">
+            <span>TOP TRACKS</span>
+            <button id="st-play-top" class="st-play" title="Shuffle &amp; play your top tracks">▶ shuffle</button>
+          </div>
+          <ol id="st-top-tracks" class="st-list"></ol>
+        </section>
+
+        <section class="st-card">
+          <div class="st-card-head"><span>TOP ARTISTS</span><span class="st-hint">▶ = shuffle that artist</span></div>
+          <ol id="st-top-artists" class="st-list"></ol>
+        </section>
+      </div>
+
+      <section class="st-card">
+        <div class="st-card-head"><span>MOST SKIPPED</span><span class="st-hint">started, then abandoned under 30&nbsp;s</span></div>
+        <ol id="st-skipped" class="st-list"></ol>
+      </section>
+    </div>
+  </div>
+
+  <script src="js/stats.js"></script>
+</body>
+</html>

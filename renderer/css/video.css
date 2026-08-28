@@ -1,0 +1,200 @@
+/* ---------- Retro Video : CRT-television side window ----------
+   Colours route through the same semantic tokens as the main skin
+   (js/themes.js writes them to <html> / localStorage). The :root block
+   below is the "Classic Green" fallback for when no theme is stored. */
+:root{
+  --body-bg:#000000;
+  --window-a:#434b5b; --window-b:#2b313d; --window-c:#232833;
+  --bevel-light:#5a6474; --bevel-dark:#0a0d12;
+  --titlebar-a:#2f6ab0; --titlebar-b:#123a67; --titlebar-text:#dbe8ff;
+  --btn-a:#4b556a; --btn-b:#2b313d; --btn-active:#1a1e26;
+  --panel:#2c323f;
+  --screen-bg:#05070a; --screen-black:#000000;
+  --screen-edge:#1c222c; --screen-edge-lite:#333b48;
+  --lcd:#12ff6a; --lcd-dim:#0c7a37; --lcd-glow:rgba(18,255,106,.55);
+  --text:#c9d4e2; --text-dim:#9fb0c4; --text-faint:#4c5a6e; --text-strong:#ffffff;
+  --list-bg:#0b0e13; --list-head-bg:#161b23; --row-hover:#171c24;
+  --accent:#1f6feb; --accent-text:#ffffff;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--body-bg);
+  color:var(--text);
+  font:11px/1.35 Tahoma,"MS Sans Serif","Segoe UI",sans-serif;
+  -webkit-user-select:none;user-select:none;
+  overflow:hidden;
+}
+
+.crt-win{
+  height:100%;display:flex;flex-direction:column;
+  background:linear-gradient(var(--window-a),var(--window-b) 6px,var(--window-c) 100%);
+  border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
+  border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
+}
+
+/* ---------- titlebar ---------- */
+.crt-titlebar{
+  -webkit-app-region:drag;
+  height:20px;display:flex;align-items:center;justify-content:space-between;
+  padding:0 4px;
+  background:linear-gradient(var(--titlebar-a),var(--titlebar-b));
+  border-bottom:1px solid var(--bevel-dark);
+}
+.crt-title-text{
+  font-size:9px;letter-spacing:1px;color:var(--titlebar-text);
+  text-shadow:0 1px 0 #000;font-weight:bold;
+}
+.crt-title-btns{display:flex;gap:2px;}
+.crt-title-btns button{
+  width:16px;height:14px;line-height:12px;font-size:10px;color:var(--text);
+  background:linear-gradient(var(--btn-a),var(--btn-b));
+  border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
+  border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
+}
+.crt-title-btns button:active{background:var(--btn-active);}
+#crt-dock{font-size:9px;}
+#crt-dock.on{
+  background:linear-gradient(var(--titlebar-a),var(--titlebar-b));
+  color:var(--titlebar-text);
+}
+.no-drag,.no-drag *{-webkit-app-region:no-drag;}
+
+/* ---------- search ---------- */
+.crt-search{display:flex;gap:4px;padding:6px;background:var(--list-head-bg);
+  border-bottom:1px solid var(--bevel-dark);}
+.crt-search input{
+  flex:1;background:var(--screen-bg);border:1px solid var(--screen-bg);color:var(--lcd);
+  padding:4px 6px;font:11px "Consolas",monospace;outline:none;
+}
+.crt-search button{
+  padding:4px 12px;color:var(--text);
+  background:linear-gradient(var(--btn-a),var(--btn-b));
+  border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
+  border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
+}
+
+/* ---------- CRT stage ---------- */
+.crt-stage{padding:10px 12px 6px;}
+.crt-bezel{
+  position:relative;padding:14px 14px 8px;border-radius:16px;
+  background:
+    radial-gradient(120% 120% at 30% 0%, #3a3f49 0%, #23262d 55%, #15171c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    inset 0 -3px 10px rgba(0,0,0,.6),
+    0 8px 22px rgba(0,0,0,.55);
+  border:1px solid var(--bevel-dark);
+}
+.crt-screen{
+  position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;
+  border-radius:11px / 16px;               /* gentle tube curvature */
+  background:#000;
+  box-shadow:
+    inset 0 0 24px rgba(0,0,0,.9),
+    inset 0 0 70px rgba(0,0,0,.55),
+    0 0 0 2px #0c0e12,
+    0 0 0 3px #2b2f37;
+}
+#vid,#vid iframe{
+  position:absolute;inset:0;width:100%;height:100%;border:0;
+  transform:scale(1.015);                  /* hide the letterbox hairline */
+}
+
+/* no-signal placeholder (until the first video loads) */
+.crt-noise{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:
+    repeating-linear-gradient(0deg, #111 0 2px, #0a0a0a 2px 4px),
+    #0b0b0b;
+  color:var(--lcd);z-index:4;
+}
+.crt-noise.hidden{display:none;}
+.crt-noise-txt{
+  font:12px "Consolas",monospace;letter-spacing:3px;color:var(--lcd);
+  text-shadow:0 0 8px var(--lcd-glow);animation:crt-roll 5s linear infinite;
+}
+@keyframes crt-roll{0%{transform:translateY(-40px);}100%{transform:translateY(40px);}}
+
+.crt-scan{
+  position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(
+    to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.16) 2px 3px);
+  mix-blend-mode:multiply;
+}
+.crt-vignette{
+  position:absolute;inset:0;pointer-events:none;z-index:6;
+  background:radial-gradient(120% 120% at 50% 50%,
+    rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%);
+}
+.crt-flicker{
+  position:absolute;inset:0;pointer-events:none;z-index:7;
+  background:rgba(120,180,255,.05);opacity:0;
+  animation:crt-flicker .13s steps(2,end) infinite;
+}
+@keyframes crt-flicker{0%{opacity:.02;}50%{opacity:.06;}100%{opacity:.02;}}
+
+.crt-screen.power-on{animation:crt-power .5s ease-out;}
+@keyframes crt-power{
+  0%{filter:brightness(4);transform:scaleY(.02);}
+  35%{transform:scaleY(1);}
+  100%{filter:brightness(1);}
+}
+
+.crt-badge{
+  display:flex;align-items:center;gap:7px;justify-content:flex-end;
+  padding:6px 4px 0;
+}
+.crt-led{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--lcd);box-shadow:0 0 6px var(--lcd-glow);
+}
+.crt-led.off{background:#3a1414;box-shadow:none;}
+.crt-brand{
+  font:8px "Consolas",monospace;letter-spacing:2px;color:var(--text-faint);
+}
+
+/* ---------- now playing ---------- */
+.crt-now{
+  margin:2px 12px 6px;padding:4px 8px;
+  background:var(--screen-black);border:1px solid var(--screen-edge);
+  color:var(--lcd);font:10px "Consolas",monospace;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  text-shadow:0 0 5px var(--lcd-glow);
+}
+
+/* ---------- results ---------- */
+.crt-results{
+  list-style:none;flex:1;overflow:auto;margin:0 8px;
+  background:var(--list-bg);border:1px solid var(--screen-edge);
+}
+.crt-results li{
+  display:flex;gap:8px;align-items:center;padding:5px 7px;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04);color:var(--text-dim);
+}
+.crt-results li:hover{background:var(--row-hover);}
+.crt-results li.playing{color:var(--lcd);text-shadow:0 0 5px var(--lcd-glow);}
+.crt-results .v-thumb{
+  flex:0 0 auto;width:64px;height:36px;object-fit:cover;
+  background:var(--screen-bg);border:1px solid var(--screen-edge);
+}
+.crt-results .v-meta{flex:1;min-width:0;}
+.crt-results .v-title{
+  display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:var(--text);
+}
+.crt-results .v-sub{
+  display:block;font-size:9px;color:var(--text-faint);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.crt-results .v-dur{
+  flex:0 0 auto;font:9px "Consolas",monospace;color:var(--text-faint);
+}
+.crt-results .v-dur.live{color:#ff5a5a;font-weight:bold;}
+
+.crt-foot{
+  padding:4px 8px;margin:4px 8px 8px;font-size:9px;letter-spacing:.5px;
+  background:var(--list-head-bg);color:var(--lcd-dim);
+}
+.crt-foot:empty{display:none;}

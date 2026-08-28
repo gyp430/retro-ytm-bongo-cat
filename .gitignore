@@ -1,0 +1,22 @@
+# deps / build output
+node_modules/
+dist/
+build/
+release/
+__pycache__/
+*.pyc
+
+# Contains your YouTube Music auth cookies — never commit this
+py/browser.json
+
+# runtime caches (regenerable)
+graphify-out/
+.retro-ytm-cache/
+
+# agent / editor tooling (machine-specific paths)
+.claude/
+
+# misc
+.DS_Store
+Thumbs.db
+*.log

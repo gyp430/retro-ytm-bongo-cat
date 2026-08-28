@@ -1,0 +1,89 @@
+/* Retro YTM — statistics window. Uses the shared theme tokens (applied to
+   <html> by the no-flash script) with Classic-Green fallbacks. */
+:root{
+  --screen-black:#000; --list-bg:#0b0e13; --list-head-bg:#161b23;
+  --screen-edge:#1c222c; --row-hover:#171c24;
+  --lcd:#12ff6a; --lcd-dim:#0c7a37; --lcd-glow:rgba(18,255,106,.55);
+  --text:#c9d4e2; --text-dim:#9fb0c4; --text-faint:#4c5a6e;
+  --accent:#1f6feb; --accent-text:#fff;
+  --btn-a:#4b556a; --btn-b:#2b313d;
+  --bevel-light:#5a6474; --bevel-dark:#0a0d12;
+  --vis-top:#8dffb9; --vis-bottom:#0c7a37;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--screen-black);color:var(--text);
+  font:11px/1.4 Tahoma,"Segoe UI",sans-serif;
+  -webkit-user-select:none;user-select:none;overflow:hidden;
+}
+.st-win{height:100%;display:flex;flex-direction:column;padding:8px;gap:8px;overflow:auto;}
+
+.st-head{
+  display:flex;align-items:baseline;justify-content:space-between;
+  padding-bottom:6px;border-bottom:1px solid var(--screen-edge);flex:0 0 auto;
+}
+.st-title{font-size:11px;letter-spacing:2px;color:var(--lcd);text-shadow:0 0 6px var(--lcd-glow);font-weight:bold;}
+.st-sub{font-size:9px;color:var(--text-faint);}
+
+.hidden{display:none !important;}
+.st-empty{
+  margin:auto;max-width:340px;text-align:center;line-height:1.7;
+  color:var(--text-dim);font-size:12px;padding:24px;
+}
+
+.st-body{display:flex;flex-direction:column;gap:10px;}
+
+/* stat tiles */
+.st-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px;}
+.st-tile{
+  background:var(--list-bg);border:1px solid var(--screen-edge);
+  padding:8px 6px;text-align:center;border-radius:2px;
+}
+.st-tile-v{font:18px/1 "Consolas",monospace;color:var(--lcd);text-shadow:0 0 6px var(--lcd-glow);}
+.st-tile-k{font-size:8px;letter-spacing:1px;color:var(--text-faint);margin-top:4px;text-transform:uppercase;}
+
+/* cards */
+.st-card{background:var(--list-bg);border:1px solid var(--screen-edge);border-radius:2px;}
+.st-card-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:5px 8px;background:var(--list-head-bg);
+  font-size:9px;letter-spacing:1.5px;color:var(--lcd-dim);
+}
+.st-hint{font-size:8px;letter-spacing:.5px;color:var(--text-faint);text-transform:none;}
+
+.st-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+@media (max-width:560px){.st-cols{grid-template-columns:1fr;}}
+
+/* lists */
+.st-list{list-style:none;max-height:280px;overflow:auto;}
+.st-list li{
+  display:flex;align-items:center;gap:8px;
+  padding:4px 8px;border-top:1px solid var(--screen-edge);
+}
+.st-list li:first-child{border-top:0;}
+.st-list li:hover{background:var(--row-hover);}
+.st-rank{flex:0 0 20px;text-align:right;color:var(--text-faint);font:10px/1 "Consolas",monospace;}
+.st-name{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden;}
+.st-name > *:first-child,.st-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.st-by{font-size:9px;color:var(--text-faint);overflow:hidden;text-overflow:ellipsis;}
+.st-count{flex:0 0 auto;color:var(--lcd);font:10px/1 "Consolas",monospace;}
+.st-none{color:var(--text-faint);font-style:italic;justify-content:center;}
+
+/* play buttons */
+.st-play{
+  font-size:9px;letter-spacing:1px;padding:2px 8px;color:var(--lcd);
+  background:linear-gradient(var(--btn-a),var(--btn-b));
+  border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
+  border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
+  cursor:pointer;
+}
+.st-play:hover{text-shadow:0 0 5px var(--lcd-glow);}
+.st-play:active{filter:brightness(.8);}
+.st-play-sm{flex:0 0 auto;padding:1px 6px;}
+
+/* daily chart */
+.st-daily{
+  display:block;width:100%;height:120px;
+  background:var(--screen-black);cursor:pointer;
+}

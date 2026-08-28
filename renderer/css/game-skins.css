@@ -1,0 +1,1342 @@
+/* ---------- Retro YTM : per-theme "game skin" element restyles ----------
+   Loaded after winamp.css. Each html[data-theme="<id>"] block re-skins the
+   REAL UI elements (window shells, the screen, transport + toolbar buttons,
+   list housings, scrollbars) to match that game's HUD — bevels, rounded
+   corners, gradient 3D buttons, inner-glow keylines, corner rivets.
+
+   Only the six GAME themes get a block; every preset and Custom is left
+   exactly as winamp.css defines it. data-theme is set on <html> by
+   themes.js apply() and by the no-flash <head> script in index.html.
+
+   Status: SC2 done. Machinae / Cyberpunk / PoE / Valorant / Dota 2 pending
+   reference images — until then they render as their plain colour theme.
+   The dormant #ornaments overlay (index.html) is kept for themes that may
+   want stuck-on corner/rail art instead of (or on top of) an element
+   restyle; nothing targets it right now. */
+
+#ornaments{position:fixed;inset:0;z-index:45;pointer-events:none;overflow:hidden;}
+#ornaments .orn{position:absolute;display:none;}
+
+
+/* ============================================================= *
+ *  StarCraft II — Terran command console                         *
+ *  gunmetal plate, radiused corners, green keyline on the screen *
+ * ============================================================= */
+html[data-theme="sc2"]{
+  --sc2-hi:#737f8b;    /* top-edge highlight   */
+  --sc2-lite:#525d68;
+  --sc2-mid:#39424c;
+  --sc2-dark:#222932;
+  --sc2-deep:#0f1318;   /* recess / border     */
+  --sc2-screen:#000305;
+  --sc2-grn:#33e558;
+  --sc2-grn-dim:#1c8f38;
+  --sc2-glow:rgba(51,229,88,.5);
+  --sc2-bolt-hi:#ffe8b0;
+  --sc2-bolt:#c9a24e;
+  --sc2-bolt-lo:#6e5220;
+}
+
+/* --- window shells --- */
+html[data-theme="sc2"] #main,
+html[data-theme="sc2"] #pled{
+  border:1px solid var(--sc2-deep);
+  border-radius:11px;
+  background:linear-gradient(180deg,var(--sc2-lite),var(--sc2-mid) 16px,var(--sc2-dark) 100%);
+  box-shadow:
+    inset 0 1px 0 var(--sc2-hi),
+    inset 0 0 0 1px rgba(115,127,139,.14),
+    inset 0 -3px 7px rgba(0,0,0,.5),
+    0 3px 11px rgba(0,0,0,.6);
+}
+html[data-theme="sc2"] #pled{margin-top:4px;}
+
+/* --- title bars --- */
+html[data-theme="sc2"] .titlebar{
+  border-radius:10px 10px 0 0;
+  border-bottom:1px solid var(--sc2-deep);
+  background:linear-gradient(180deg,var(--sc2-lite),var(--sc2-mid));
+  box-shadow:inset 0 1px 0 var(--sc2-hi);
+}
+html[data-theme="sc2"] .titlebar--sub{border-radius:0;}
+html[data-theme="sc2"] .title-text{
+  color:var(--sc2-grn);
+  text-shadow:0 0 6px var(--sc2-glow),0 1px 0 #000;
+}
+
+/* --- one beveled-button recipe for every chrome button --- */
+html[data-theme="sc2"] .title-btns button,
+html[data-theme="sc2"] .tp,
+html[data-theme="sc2"] #q-mode,
+html[data-theme="sc2"] .pl-search button,
+html[data-theme="sc2"] .pled-toggles button,
+html[data-theme="sc2"] .sl-toolbar button,
+html[data-theme="sc2"] .qp-head button,
+html[data-theme="sc2"] .theme-reset,
+html[data-theme="sc2"] .modal-btns button,
+html[data-theme="sc2"] #auth-connect{
+  border:1px solid var(--sc2-deep);
+  border-top-color:var(--sc2-hi);
+  border-radius:3px;
+  background:linear-gradient(180deg,var(--sc2-lite),var(--sc2-mid) 55%,var(--sc2-dark));
+  color:var(--sc2-grn);
+  text-shadow:0 0 4px var(--sc2-glow);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 1px 2px rgba(0,0,0,.4);
+}
+html[data-theme="sc2"] .tp:active,
+html[data-theme="sc2"] .title-btns button:active,
+html[data-theme="sc2"] .pl-search button:active{
+  background:linear-gradient(180deg,var(--sc2-dark),var(--sc2-mid));
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.55);
+}
+
+/* lit toggles + primary CTAs = glowing green key */
+html[data-theme="sc2"] .tp.toggle.on,
+html[data-theme="sc2"] #sl-push,
+html[data-theme="sc2"] #modal-ok,
+html[data-theme="sc2"] .big-btn{
+  background:linear-gradient(180deg,var(--sc2-grn),var(--sc2-grn-dim));
+  color:#05230f;
+  border:1px solid #0c3b1a;border-top-color:#8effa6;
+  text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 10px var(--sc2-glow);
+}
+html[data-theme="sc2"] .pled-toggles button.on{
+  color:var(--sc2-grn);border-top-color:#8effa6;
+  text-shadow:0 0 6px var(--sc2-glow);
+}
+
+/* --- the screen: black panel, green inner keyline, stacked metal surround --- */
+html[data-theme="sc2"] .display{
+  position:relative;
+  margin:12px;
+  border:0;
+  border-radius:9px;
+  background:var(--sc2-screen);
+  box-shadow:
+    inset 0 0 0 2px var(--sc2-grn-dim),
+    inset 0 0 16px rgba(51,229,88,.26),
+    0 0 0 3px var(--sc2-dark),
+    0 0 0 4px var(--sc2-deep),
+    0 0 0 7px var(--sc2-mid),
+    0 0 0 8px var(--sc2-deep),
+    0 3px 10px rgba(0,0,0,.6);
+}
+/* four bronze corner rivets on the screen frame */
+html[data-theme="sc2"] .display::after{
+  content:"";position:absolute;inset:-4px;pointer-events:none;
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(circle 4px at 7px 7px,             var(--sc2-bolt-hi) 0 25%,var(--sc2-bolt) 45%,var(--sc2-bolt-lo) 72%,transparent 74%),
+    radial-gradient(circle 4px at calc(100% - 7px) 7px,var(--sc2-bolt-hi) 0 25%,var(--sc2-bolt) 45%,var(--sc2-bolt-lo) 72%,transparent 74%),
+    radial-gradient(circle 4px at 7px calc(100% - 7px),var(--sc2-bolt-hi) 0 25%,var(--sc2-bolt) 45%,var(--sc2-bolt-lo) 72%,transparent 74%),
+    radial-gradient(circle 4px at calc(100% - 7px) calc(100% - 7px),var(--sc2-bolt-hi) 0 25%,var(--sc2-bolt) 45%,var(--sc2-bolt-lo) 72%,transparent 74%);
+}
+
+html[data-theme="sc2"] .marquee,
+html[data-theme="sc2"] .bar{
+  border-radius:3px;border-color:var(--sc2-deep);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.6);
+}
+html[data-theme="sc2"] .bar .fill{
+  background:linear-gradient(180deg,var(--sc2-grn),var(--sc2-grn-dim));opacity:.9;
+}
+html[data-theme="sc2"] .bar .thumb{
+  background:linear-gradient(180deg,var(--sc2-hi),var(--sc2-dark));
+  border-color:var(--sc2-deep);border-radius:2px;
+}
+
+/* --- transport tray --- */
+html[data-theme="sc2"] .transport{
+  border:1px solid var(--sc2-deep);
+  border-top-color:var(--sc2-hi);
+  border-radius:7px;
+  margin:0 12px 10px;
+  background:linear-gradient(180deg,var(--sc2-mid),var(--sc2-dark));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.1),inset 0 -2px 5px rgba(0,0,0,.5);
+}
+
+/* --- list housings (command-card style: metal frame, no green keyline) --- */
+html[data-theme="sc2"] .pl-sidebar,
+html[data-theme="sc2"] .pl-main,
+html[data-theme="sc2"] .queue-panel{
+  border:1px solid var(--sc2-deep);
+  border-top-color:var(--sc2-lite);
+  border-radius:7px;
+  background:#05090c;
+  box-shadow:inset 0 1px 0 rgba(115,127,139,.22),inset 0 0 9px rgba(0,0,0,.6);
+}
+html[data-theme="sc2"] .pl-sidebar-head,
+html[data-theme="sc2"] .pl-search,
+html[data-theme="sc2"] .qp-head,
+html[data-theme="sc2"] .pl-foot,
+html[data-theme="sc2"] .qp-foot{
+  background:linear-gradient(180deg,var(--sc2-mid),var(--sc2-dark));
+  color:var(--sc2-grn-dim);
+}
+html[data-theme="sc2"] .qp-head--lists{border-top-color:var(--sc2-deep);}
+
+/* recessed inputs with a green focus keyline */
+html[data-theme="sc2"] .pl-search input,
+html[data-theme="sc2"] .modal-input,
+html[data-theme="sc2"] .sl-select,
+html[data-theme="sc2"] #auth-headers{
+  border:1px solid var(--sc2-deep);border-radius:3px;
+  background:#04070a;color:var(--sc2-grn);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+html[data-theme="sc2"] .pl-search input:focus,
+html[data-theme="sc2"] .modal-input:focus{
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 1px var(--sc2-grn-dim),0 0 8px var(--sc2-glow);
+}
+
+/* --- resize splitters --- */
+html[data-theme="sc2"] .splitter{
+  background:linear-gradient(180deg,var(--sc2-mid),var(--sc2-dark));
+  border-left:1px solid var(--sc2-deep);
+  border-right:1px solid var(--sc2-lite);
+}
+html[data-theme="sc2"] .splitter:hover{background:var(--sc2-grn-dim);}
+
+/* --- floating surfaces --- */
+html[data-theme="sc2"] .ctx-menu,
+html[data-theme="sc2"] .modal-card,
+html[data-theme="sc2"] .theme-pop,
+html[data-theme="sc2"] .toast,
+html[data-theme="sc2"] .auth-card{
+  border:1px solid var(--sc2-deep);border-radius:8px;
+  background:linear-gradient(180deg,var(--sc2-mid),var(--sc2-dark));
+  box-shadow:inset 0 1px 0 var(--sc2-hi),0 8px 22px rgba(0,0,0,.6);
+}
+
+/* --- scrollbars --- */
+html[data-theme="sc2"] ::-webkit-scrollbar{width:10px;height:10px;}
+html[data-theme="sc2"] ::-webkit-scrollbar-track{background:#04070a;border-radius:3px;}
+html[data-theme="sc2"] ::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,var(--sc2-lite),var(--sc2-dark));
+  border:1px solid var(--sc2-deep);border-radius:3px;
+}
+html[data-theme="sc2"] ::-webkit-scrollbar-thumb:hover{background:var(--sc2-grn-dim);}
+
+
+/* ============================================================= *
+ *  Machinae Supremacy — glossy piano-black + chrome + cyan       *
+ *  refs: "Redeemer" (red ink splatter, chromed angular logo),    *
+ *        "Deus Ex Machinae" (wet black squircle, mirror chevrons)*
+ * ============================================================= */
+html[data-theme="machinae"]{
+  --ms-chrome-hi:#e9eef2;   /* specular polish        */
+  --ms-chrome:#a7b3be;
+  --ms-chrome-lo:#5f6a75;
+  --ms-edge:#05070a;        /* near-black hairline    */
+  --ms-glass-hi:#333b45;    /* glossy black, lit top  */
+  --ms-glass:#161a20;
+  --ms-glass-lo:#0a0c0f;
+  --ms-black:#000306;       /* the screen            */
+  --ms-cyan:#46ecff;
+  --ms-cyan-dim:#1f8296;
+  --ms-cyan-deep:#0c3a45;
+  --ms-cyan-glow:rgba(70,236,255,.55);
+  --ms-red:#e5231b;
+  --ms-red-glow:rgba(229,35,27,.5);
+}
+
+/* --- window shells: wet black, chrome hairline, big radius --- */
+html[data-theme="machinae"] #main,
+html[data-theme="machinae"] #pled{
+  position:relative;
+  border:1px solid var(--ms-edge);
+  border-top-color:var(--ms-chrome-lo);
+  border-radius:13px;
+  background:linear-gradient(180deg,#2b313b 0,#14171c 10px,var(--ms-glass-lo) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 0 0 1px rgba(167,179,190,.1),
+    inset 0 -4px 9px rgba(0,0,0,.65),
+    0 4px 16px rgba(0,0,0,.72);
+}
+html[data-theme="machinae"] #pled{margin-top:4px;}
+
+/* one restrained red ink-splatter, bottom-right dead space (reuses the
+   dormant #ornaments overlay so it can't disturb the flex layout) */
+html[data-theme="machinae"] #ornaments .orn-br{
+  display:block;bottom:2px;right:3px;width:88px;height:44px;
+  opacity:.42;background-repeat:no-repeat;background-position:bottom right;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 44'%3E%3Cg fill='%23e5231b'%3E%3Cpath d='M60 10c10-7 26-4 30 6 3 9-8 16-19 13-12-3-19-13-11-19z'/%3E%3Cpath d='M92 6c5 0 8 8 5 16-2 5-7 4-8-1-2-7-1-15 3-15z'/%3E%3Ccircle cx='50' cy='6' r='3'/%3E%3Ccircle cx='44' cy='18' r='2'/%3E%3Ccircle cx='103' cy='30' r='2.6'/%3E%3Ccircle cx='112' cy='12' r='1.8'/%3E%3Ccircle cx='72' cy='34' r='2'/%3E%3Cpath d='M116 20c4-1 6 2 5 5-1 2-6 2-7-1-1-2 0-3 2-4z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* --- title bars --- */
+html[data-theme="machinae"] .titlebar{
+  border-radius:12px 12px 0 0;
+  border-bottom:1px solid var(--ms-edge);
+  background:linear-gradient(180deg,#3a424e 0,#20262e 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 1px 0 var(--ms-chrome-lo);
+}
+html[data-theme="machinae"] .titlebar--sub{border-radius:0;}
+html[data-theme="machinae"] .title-text{
+  color:var(--ms-cyan);
+  text-shadow:0 0 9px var(--ms-cyan-glow),0 1px 0 #000;
+}
+
+/* --- shared button recipe: dark reflective chrome, cyan legend --- */
+html[data-theme="machinae"] .title-btns button,
+html[data-theme="machinae"] .tp,
+html[data-theme="machinae"] #q-mode,
+html[data-theme="machinae"] .pl-search button,
+html[data-theme="machinae"] .pled-toggles button,
+html[data-theme="machinae"] .sl-toolbar button,
+html[data-theme="machinae"] .qp-head button,
+html[data-theme="machinae"] .theme-reset,
+html[data-theme="machinae"] .modal-btns button,
+html[data-theme="machinae"] #auth-connect{
+  border:1px solid var(--ms-edge);
+  border-top-color:var(--ms-chrome);
+  border-radius:2px;
+  background:linear-gradient(180deg,#5b6672 0%,#39424c 45%,#232a32 53%,#414a54 100%);
+  color:var(--ms-cyan);
+  text-shadow:0 0 5px var(--ms-cyan-glow);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 1px 2px rgba(0,0,0,.5);
+}
+html[data-theme="machinae"] .tp:active,
+html[data-theme="machinae"] .title-btns button:active,
+html[data-theme="machinae"] .pl-search button:active{
+  background:linear-gradient(180deg,#232a32,#414a54);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.6);
+}
+
+/* lit toggles + primary CTAs = cyan gel */
+html[data-theme="machinae"] .tp.toggle.on,
+html[data-theme="machinae"] #sl-push,
+html[data-theme="machinae"] #modal-ok,
+html[data-theme="machinae"] .big-btn{
+  background:linear-gradient(180deg,#9df6ff 0%,#45cee6 48%,#1f93ad 100%);
+  color:#04202a;
+  border:1px solid var(--ms-cyan-deep);border-top-color:#d5fbff;
+  text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.6),0 0 13px var(--ms-cyan-glow);
+}
+html[data-theme="machinae"] .pled-toggles button.on{
+  color:var(--ms-cyan);border-top-color:#d5fbff;
+  text-shadow:0 0 7px var(--ms-cyan-glow);
+}
+
+/* --- the screen: black panel, cyan keyline, polished chrome surround --- */
+html[data-theme="machinae"] .display{
+  position:relative;
+  margin:12px;
+  border:0;
+  border-radius:10px;
+  background:var(--ms-black);
+  box-shadow:
+    inset 0 0 0 2px var(--ms-cyan-dim),
+    inset 0 0 18px rgba(70,236,255,.26),
+    0 0 0 3px #2b323b,
+    0 0 0 4px var(--ms-edge),
+    0 0 0 6px #808c98,
+    0 0 0 7px var(--ms-chrome-hi),
+    0 0 0 9px var(--ms-edge),
+    0 3px 14px rgba(0,0,0,.75);
+}
+/* top-edge wet highlight (frame only, clear of the readout) */
+html[data-theme="machinae"] .display::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:11px;
+  pointer-events:none;border-radius:10px 10px 0 0;
+  background:linear-gradient(180deg,rgba(255,255,255,.2),transparent);
+}
+/* two mirror chevrons on the frame's lower corners (the "Deus Ex" blades) */
+html[data-theme="machinae"] .display::after{
+  content:"";position:absolute;inset:-3px;pointer-events:none;
+  background-repeat:no-repeat;
+  background-position:left 7px bottom 4px,right 7px bottom 4px;
+  background-size:18px auto,18px auto;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 16'%3E%3Cdefs%3E%3ClinearGradient id='c' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e9eef2'/%3E%3Cstop offset='.5' stop-color='%238b97a3'/%3E%3Cstop offset='.52' stop-color='%234a535d'/%3E%3Cstop offset='1' stop-color='%23aab6c1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M2 2l8 6 8-6v5l-8 6-8-6z' fill='url(%23c)' stroke='%2305070a' stroke-width='1'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 16'%3E%3Cdefs%3E%3ClinearGradient id='c' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23e9eef2'/%3E%3Cstop offset='.5' stop-color='%238b97a3'/%3E%3Cstop offset='.52' stop-color='%234a535d'/%3E%3Cstop offset='1' stop-color='%23aab6c1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M2 2l8 6 8-6v5l-8 6-8-6z' fill='url(%23c)' stroke='%2305070a' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+html[data-theme="machinae"] .marquee,
+html[data-theme="machinae"] .bar{
+  border-radius:3px;border-color:var(--ms-edge);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.7);
+}
+html[data-theme="machinae"] .bar .fill{
+  background:linear-gradient(180deg,var(--ms-cyan),var(--ms-cyan-dim));opacity:.9;
+}
+html[data-theme="machinae"] .bar .thumb{
+  background:linear-gradient(180deg,var(--ms-chrome-hi),var(--ms-chrome-lo));
+  border-color:var(--ms-edge);border-radius:2px;
+}
+
+/* --- transport tray: chrome frame + a red edge stripe (splatter nod) --- */
+html[data-theme="machinae"] .transport{
+  border:1px solid var(--ms-edge);
+  border-top-color:var(--ms-chrome-lo);
+  border-radius:7px;
+  margin:0 12px 10px;
+  background:linear-gradient(180deg,#2a313a,#14181e);
+  box-shadow:
+    inset 3px 0 0 var(--ms-red),
+    inset 0 1px 0 rgba(255,255,255,.12),
+    inset 0 -2px 6px rgba(0,0,0,.55);
+}
+
+/* --- list housings: wet black, chrome hairline --- */
+html[data-theme="machinae"] .pl-sidebar,
+html[data-theme="machinae"] .pl-main,
+html[data-theme="machinae"] .queue-panel{
+  border:1px solid var(--ms-edge);
+  border-top-color:var(--ms-chrome-lo);
+  border-radius:8px;
+  background:#04070a;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 0 11px rgba(0,0,0,.72);
+}
+html[data-theme="machinae"] .pl-sidebar-head,
+html[data-theme="machinae"] .pl-search,
+html[data-theme="machinae"] .qp-head,
+html[data-theme="machinae"] .pl-foot,
+html[data-theme="machinae"] .qp-foot{
+  background:linear-gradient(180deg,#2a313a,#14181e);
+  color:var(--ms-cyan-dim);
+}
+html[data-theme="machinae"] .qp-head--lists{border-top-color:var(--ms-edge);}
+
+/* recessed inputs with a cyan focus keyline */
+html[data-theme="machinae"] .pl-search input,
+html[data-theme="machinae"] .modal-input,
+html[data-theme="machinae"] .sl-select,
+html[data-theme="machinae"] #auth-headers{
+  border:1px solid var(--ms-edge);border-radius:3px;
+  background:#03060a;color:var(--ms-cyan);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.7);
+}
+html[data-theme="machinae"] .pl-search input:focus,
+html[data-theme="machinae"] .modal-input:focus{
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.7),0 0 0 1px var(--ms-cyan-dim),0 0 9px var(--ms-cyan-glow);
+}
+
+/* --- resize splitters --- */
+html[data-theme="machinae"] .splitter{
+  background:linear-gradient(180deg,#3a424c,#181d24);
+  border-left:1px solid var(--ms-edge);
+  border-right:1px solid var(--ms-chrome-lo);
+}
+html[data-theme="machinae"] .splitter:hover{background:var(--ms-cyan-dim);}
+
+/* --- floating surfaces --- */
+html[data-theme="machinae"] .ctx-menu,
+html[data-theme="machinae"] .modal-card,
+html[data-theme="machinae"] .theme-pop,
+html[data-theme="machinae"] .toast,
+html[data-theme="machinae"] .auth-card{
+  border:1px solid var(--ms-edge);border-radius:9px;
+  background:linear-gradient(180deg,#242a32,#12151a);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 10px 26px rgba(0,0,0,.72);
+}
+
+/* --- scrollbars --- */
+html[data-theme="machinae"] ::-webkit-scrollbar{width:10px;height:10px;}
+html[data-theme="machinae"] ::-webkit-scrollbar-track{background:#03060a;border-radius:3px;}
+html[data-theme="machinae"] ::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#5b6672,#20262e);
+  border:1px solid var(--ms-edge);border-radius:2px;
+}
+html[data-theme="machinae"] ::-webkit-scrollbar-thumb:hover{background:var(--ms-cyan-dim);}
+
+
+/* ============================================================= *
+ *  Cyberpunk 2077 — red holographic database terminal            *
+ *  ref: the braindance / evidence-DB screens — flat near-black   *
+ *  panels, thin BRIGHT-RED glowing hairlines, sharp corners,     *
+ *  scanlines, corner ticks, tiny mono serials, blue as the pop.  *
+ *  (No bevels — this HUD is flat neon holo, not metal.)          *
+ * ============================================================= */
+html[data-theme="cyberpunk"]{
+  --cp-red:#ff3b3b;
+  --cp-red-bright:#ff6a5a;
+  --cp-red-deep:#c81f27;
+  --cp-red-dim:#8f2b2e;
+  --cp-red-glow:rgba(255,59,59,.45);
+  --cp-blue:#3b6bff;
+  --cp-blue-glow:rgba(59,107,255,.5);
+  --cp-bg:#0b0708;
+  --cp-panel:#0a0506;
+}
+/* The red readout / blue selection come from SEED.cyberpunk in themes.js
+   (themes.js sets --lcd/--accent/etc. as INLINE styles on <html>, which
+   beat any rule here — so palette tokens must be changed there, not in
+   this file). This block only adds the holographic-frame material. */
+
+/* --- window shells: flat near-black, thin glowing red hairline, sharp --- */
+html[data-theme="cyberpunk"] #main,
+html[data-theme="cyberpunk"] #pled{
+  border:1px solid var(--cp-red);
+  border-radius:0;
+  background:linear-gradient(180deg,#130b0c,var(--cp-bg) 55%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,59,59,.12),
+    inset 0 0 26px rgba(255,59,59,.05),
+    0 0 0 1px rgba(255,59,59,.22),
+    0 0 16px rgba(255,59,59,.13);
+}
+html[data-theme="cyberpunk"] #pled{margin-top:4px;}
+
+/* --- title bars: dark, bright-red rule + a serial legend --- */
+html[data-theme="cyberpunk"] .titlebar{
+  border-radius:0;
+  border-bottom:1px solid var(--cp-red);
+  background:linear-gradient(180deg,#1a0e0f,#0c0708);
+  box-shadow:0 1px 0 rgba(255,59,59,.22),0 0 10px rgba(255,59,59,.09);
+}
+html[data-theme="cyberpunk"] .titlebar--sub{border-bottom-color:rgba(255,59,59,.35);}
+html[data-theme="cyberpunk"] .title-text{
+  color:var(--cp-red-bright);
+  text-shadow:0 0 8px var(--cp-red-glow);
+}
+html[data-theme="cyberpunk"] #main .title-text::after{
+  content:"  //SEC.NET_2.0.77";
+  color:var(--cp-red-dim);font-size:8px;letter-spacing:.5px;
+}
+
+/* --- buttons: flat, thin red frame, red legend; active/on = red fill --- */
+html[data-theme="cyberpunk"] .title-btns button,
+html[data-theme="cyberpunk"] .tp,
+html[data-theme="cyberpunk"] #q-mode,
+html[data-theme="cyberpunk"] .pl-search button,
+html[data-theme="cyberpunk"] .pled-toggles button,
+html[data-theme="cyberpunk"] .sl-toolbar button,
+html[data-theme="cyberpunk"] .qp-head button,
+html[data-theme="cyberpunk"] .theme-reset,
+html[data-theme="cyberpunk"] .modal-btns button,
+html[data-theme="cyberpunk"] #auth-connect{
+  border:1px solid var(--cp-red-dim);
+  border-radius:0;
+  background:#140b0c;
+  color:var(--cp-red-bright);
+  text-shadow:0 0 5px var(--cp-red-glow);
+  box-shadow:inset 0 0 8px rgba(255,59,59,.09);
+}
+html[data-theme="cyberpunk"] .tp:hover,
+html[data-theme="cyberpunk"] .title-btns button:hover,
+html[data-theme="cyberpunk"] .pl-search button:hover,
+html[data-theme="cyberpunk"] .pled-toggles button:hover,
+html[data-theme="cyberpunk"] .sl-toolbar button:hover,
+html[data-theme="cyberpunk"] .qp-head button:hover{
+  border-color:var(--cp-red);
+  box-shadow:inset 0 0 10px rgba(255,59,59,.18),0 0 8px var(--cp-red-glow);
+}
+html[data-theme="cyberpunk"] .tp:active,
+html[data-theme="cyberpunk"] .title-btns button:active,
+html[data-theme="cyberpunk"] .pl-search button:active{
+  background:linear-gradient(180deg,var(--cp-red),var(--cp-red-deep));
+  color:#0a0506;text-shadow:none;
+}
+
+/* lit toggles + primary CTAs = solid red key */
+html[data-theme="cyberpunk"] .tp.toggle.on,
+html[data-theme="cyberpunk"] #sl-push,
+html[data-theme="cyberpunk"] #modal-ok,
+html[data-theme="cyberpunk"] .big-btn{
+  background:linear-gradient(180deg,var(--cp-red-bright),var(--cp-red-deep));
+  color:#0a0506;
+  border:1px solid var(--cp-red);
+  text-shadow:none;
+  box-shadow:0 0 12px var(--cp-red-glow),inset 0 0 6px rgba(255,255,255,.14);
+}
+html[data-theme="cyberpunk"] .pled-toggles button.on{
+  color:var(--cp-red-bright);border-color:var(--cp-red);
+  text-shadow:0 0 7px var(--cp-red-glow);
+}
+
+/* --- the screen: black, red hairline + bloom, scanlines, corner ticks --- */
+html[data-theme="cyberpunk"] .display{
+  position:relative;
+  margin:10px;
+  border:1px solid var(--cp-red);
+  border-radius:0;
+  background:#050203;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,59,59,.22),
+    inset 0 0 24px rgba(255,59,59,.13),
+    0 0 15px rgba(255,59,59,.2);
+}
+/* scanlines + 4 corner brackets in one overlay */
+html[data-theme="cyberpunk"] .display::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;
+  background-image:
+    linear-gradient(var(--cp-red),var(--cp-red)),linear-gradient(var(--cp-red),var(--cp-red)),
+    linear-gradient(var(--cp-red),var(--cp-red)),linear-gradient(var(--cp-red),var(--cp-red)),
+    linear-gradient(var(--cp-red),var(--cp-red)),linear-gradient(var(--cp-red),var(--cp-red)),
+    linear-gradient(var(--cp-red),var(--cp-red)),linear-gradient(var(--cp-red),var(--cp-red)),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,rgba(0,0,0,0) 1px 3px);
+  background-size:
+    9px 2px,2px 9px, 9px 2px,2px 9px,
+    9px 2px,2px 9px, 9px 2px,2px 9px,
+    100% 100%;
+  background-position:
+    left top,left top, right top,right top,
+    left bottom,left bottom, right bottom,right bottom,
+    center;
+}
+/* tiny corner serial */
+html[data-theme="cyberpunk"] .display::after{
+  content:"SYS_2.0.77 · NET//SEC";
+  position:absolute;right:8px;top:3px;z-index:2;pointer-events:none;
+  font:7px/1 "Consolas",monospace;letter-spacing:1px;
+  color:var(--cp-red-dim);
+}
+
+html[data-theme="cyberpunk"] .marquee,
+html[data-theme="cyberpunk"] .bar{
+  border-radius:0;border-color:var(--cp-red-dim);background:#080304;
+}
+html[data-theme="cyberpunk"] .bar .fill{
+  background:linear-gradient(180deg,var(--cp-red-bright),var(--cp-red-deep));opacity:.95;
+  box-shadow:0 0 8px var(--cp-red-glow);
+}
+html[data-theme="cyberpunk"] .bar .thumb{
+  background:var(--cp-red);border-color:#0a0506;border-radius:0;
+  box-shadow:0 0 6px var(--cp-red-glow);
+}
+
+/* --- transport: flat, red top accent --- */
+html[data-theme="cyberpunk"] .transport{
+  border:1px solid var(--cp-red-dim);
+  border-top:2px solid var(--cp-red);
+  border-radius:0;margin:0 10px 10px;
+  background:#0c0708;
+  box-shadow:inset 0 0 16px rgba(255,59,59,.05);
+}
+
+/* --- list housings: flat near-black, red top accent bar --- */
+html[data-theme="cyberpunk"] .pl-sidebar,
+html[data-theme="cyberpunk"] .pl-main,
+html[data-theme="cyberpunk"] .queue-panel{
+  border:1px solid var(--cp-red-dim);
+  border-top:2px solid var(--cp-red);
+  border-radius:0;
+  background:var(--cp-panel);
+  box-shadow:inset 0 0 14px rgba(255,59,59,.05),0 0 8px rgba(255,59,59,.07);
+}
+html[data-theme="cyberpunk"] .pl-sidebar-head,
+html[data-theme="cyberpunk"] .qp-head{
+  background:#150a0b;color:var(--cp-red-bright);letter-spacing:2px;
+}
+html[data-theme="cyberpunk"] .pl-sidebar-head::before,
+html[data-theme="cyberpunk"] .qp-head > span:first-child::before{
+  content:"\25C6 ";color:var(--cp-red);
+}
+html[data-theme="cyberpunk"] .pl-search,
+html[data-theme="cyberpunk"] .pl-foot,
+html[data-theme="cyberpunk"] .qp-foot{
+  background:#120809;color:var(--cp-red-dim);
+}
+html[data-theme="cyberpunk"] .qp-head--lists{border-top-color:rgba(255,59,59,.35);}
+
+/* recessed inputs, red focus bloom */
+html[data-theme="cyberpunk"] .pl-search input,
+html[data-theme="cyberpunk"] .modal-input,
+html[data-theme="cyberpunk"] .sl-select,
+html[data-theme="cyberpunk"] #auth-headers{
+  border:1px solid var(--cp-red-dim);border-radius:0;
+  background:#0a0405;color:var(--cp-red-bright);
+  box-shadow:inset 0 0 8px rgba(255,59,59,.07);
+}
+html[data-theme="cyberpunk"] .pl-search input:focus,
+html[data-theme="cyberpunk"] .modal-input:focus{
+  border-color:var(--cp-red);
+  box-shadow:inset 0 0 8px rgba(255,59,59,.12),0 0 8px var(--cp-red-glow);
+}
+
+/* --- resize splitters --- */
+html[data-theme="cyberpunk"] .splitter{
+  background:var(--cp-red-dim);
+  border-left:1px solid #0a0506;border-right:1px solid #0a0506;
+}
+html[data-theme="cyberpunk"] .splitter:hover{
+  background:var(--cp-red);box-shadow:0 0 8px var(--cp-red-glow);
+}
+
+/* --- floating surfaces --- */
+html[data-theme="cyberpunk"] .ctx-menu,
+html[data-theme="cyberpunk"] .modal-card,
+html[data-theme="cyberpunk"] .theme-pop,
+html[data-theme="cyberpunk"] .toast,
+html[data-theme="cyberpunk"] .auth-card{
+  border:1px solid var(--cp-red);border-radius:0;
+  background:linear-gradient(180deg,#140b0c,#0a0506);
+  box-shadow:0 0 0 1px rgba(255,59,59,.18),0 0 18px rgba(255,59,59,.13),0 10px 26px rgba(0,0,0,.7);
+}
+
+/* --- scrollbars --- */
+html[data-theme="cyberpunk"] ::-webkit-scrollbar{width:9px;height:9px;}
+html[data-theme="cyberpunk"] ::-webkit-scrollbar-track{background:#0a0405;}
+html[data-theme="cyberpunk"] ::-webkit-scrollbar-thumb{
+  background:var(--cp-red-dim);border:1px solid #0a0506;border-radius:0;
+}
+html[data-theme="cyberpunk"] ::-webkit-scrollbar-thumb:hover{background:var(--cp-red);}
+
+
+/* ============================================================= *
+ *  Path of Exile — blackened-bronze gothic HUD                   *
+ *  ref: the flask/skill bar — dark aged metal, AGED-GOLD edge    *
+ *  lines, nested double frames, gold corner rivets, parchment    *
+ *  text, warm amber keyline. (SEED.poe palette already fits —    *
+ *  gold --lcd, deep-red --accent — so no themes.js change.)      *
+ * ============================================================= */
+html[data-theme="poe"]{
+  --poe-metal-hi:#6b5a3c;
+  --poe-metal:#33291d;
+  --poe-metal-lo:#211a12;
+  --poe-deep:#0d0a06;
+  --poe-gold:#c9a24a;
+  --poe-gold-dim:#8a6a2f;
+  --poe-gold-deep:#5c4620;
+  --poe-gold-glow:rgba(201,162,74,.4);
+  --poe-parch:#c8b48f;
+  --poe-parch-hi:#e8dcc0;
+}
+
+/* --- window shells: blackened bronze, inset gold keyline, near-square --- */
+html[data-theme="poe"] #main,
+html[data-theme="poe"] #pled{
+  border:1px solid var(--poe-deep);
+  border-top-color:var(--poe-metal-hi);
+  border-radius:3px;
+  background:linear-gradient(180deg,#3a2f22 0,#241d14 14px,#181209 100%);
+  box-shadow:
+    inset 0 0 0 1px var(--poe-gold-deep),
+    inset 0 1px 0 var(--poe-metal-hi),
+    inset 0 0 42px rgba(0,0,0,.55),
+    0 3px 12px rgba(0,0,0,.62);
+}
+html[data-theme="poe"] #pled{margin-top:4px;}
+
+/* --- title bars --- */
+html[data-theme="poe"] .titlebar{
+  border-radius:2px 2px 0 0;
+  border-bottom:1px solid var(--poe-gold-deep);
+  background:linear-gradient(180deg,#4a3c2a,#281f14);
+  box-shadow:inset 0 1px 0 var(--poe-metal-hi),0 1px 0 rgba(201,162,74,.22);
+}
+html[data-theme="poe"] .titlebar--sub{border-bottom-color:var(--poe-metal-lo);}
+html[data-theme="poe"] .title-text{
+  color:var(--poe-parch-hi);letter-spacing:2px;
+  text-shadow:0 0 6px var(--poe-gold-glow),0 1px 0 #000;
+}
+html[data-theme="poe"] #main .title-text::before{
+  content:"\27E1 ";color:var(--poe-gold-dim);
+}
+
+/* --- shared button recipe: aged bronze bevel, parchment legend --- */
+html[data-theme="poe"] .title-btns button,
+html[data-theme="poe"] .tp,
+html[data-theme="poe"] #q-mode,
+html[data-theme="poe"] .pl-search button,
+html[data-theme="poe"] .pled-toggles button,
+html[data-theme="poe"] .sl-toolbar button,
+html[data-theme="poe"] .qp-head button,
+html[data-theme="poe"] .theme-reset,
+html[data-theme="poe"] .modal-btns button,
+html[data-theme="poe"] #auth-connect{
+  border:1px solid var(--poe-deep);
+  border-top-color:var(--poe-metal-hi);
+  border-radius:2px;
+  background:linear-gradient(180deg,#4a3c2a 0%,#2c2318 55%,#1e1710 100%);
+  color:var(--poe-parch);
+  text-shadow:0 1px 0 #000;
+  box-shadow:inset 0 1px 0 rgba(107,90,60,.5),inset 0 0 0 1px rgba(92,70,32,.22),0 1px 2px rgba(0,0,0,.5);
+}
+html[data-theme="poe"] .tp:active,
+html[data-theme="poe"] .title-btns button:active,
+html[data-theme="poe"] .pl-search button:active{
+  background:linear-gradient(180deg,#1e1710,#2c2318);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+
+/* lit toggles + primary CTAs = warm gold */
+html[data-theme="poe"] .tp.toggle.on,
+html[data-theme="poe"] #sl-push,
+html[data-theme="poe"] #modal-ok,
+html[data-theme="poe"] .big-btn{
+  background:linear-gradient(180deg,#e3b45a,#a87c2e);
+  color:#241a08;
+  border:1px solid #4a3410;border-top-color:#f4d78a;
+  text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.32),0 0 12px var(--poe-gold-glow);
+}
+html[data-theme="poe"] .pled-toggles button.on{
+  color:var(--poe-gold);border-top-color:#f4d78a;
+  text-shadow:0 0 6px var(--poe-gold-glow);
+}
+
+/* --- the screen: black, amber keyline, bronze surround, nested gold frame + rivets --- */
+html[data-theme="poe"] .display{
+  position:relative;
+  margin:12px;
+  border:0;
+  border-radius:4px;
+  background:#050301;
+  box-shadow:
+    inset 0 0 0 2px var(--poe-gold-deep),
+    inset 0 0 18px rgba(223,154,51,.2),
+    0 0 0 3px var(--poe-metal),
+    0 0 0 4px var(--poe-deep),
+    0 0 0 6px var(--poe-metal-hi),
+    0 0 0 8px var(--poe-deep),
+    0 3px 12px rgba(0,0,0,.65);
+}
+/* recessed inner gold frame line */
+html[data-theme="poe"] .display::before{
+  content:"";position:absolute;inset:4px;pointer-events:none;z-index:1;
+  border:1px solid rgba(201,162,74,.32);border-radius:2px;
+}
+/* four gold corner rivets on the frame */
+html[data-theme="poe"] .display::after{
+  content:"";position:absolute;inset:-3px;pointer-events:none;
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(circle 4px at 8px 8px,             #f4d78a 0 22%,var(--poe-gold) 45%,var(--poe-gold-deep) 72%,transparent 74%),
+    radial-gradient(circle 4px at calc(100% - 8px) 8px,#f4d78a 0 22%,var(--poe-gold) 45%,var(--poe-gold-deep) 72%,transparent 74%),
+    radial-gradient(circle 4px at 8px calc(100% - 8px),#f4d78a 0 22%,var(--poe-gold) 45%,var(--poe-gold-deep) 72%,transparent 74%),
+    radial-gradient(circle 4px at calc(100% - 8px) calc(100% - 8px),#f4d78a 0 22%,var(--poe-gold) 45%,var(--poe-gold-deep) 72%,transparent 74%);
+}
+
+html[data-theme="poe"] .marquee,
+html[data-theme="poe"] .bar{
+  border-radius:2px;border-color:var(--poe-gold-deep);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.6);
+}
+html[data-theme="poe"] .bar .fill{
+  background:linear-gradient(180deg,#e3b45a,#8a6a2f);opacity:.9;
+}
+html[data-theme="poe"] .bar .thumb{
+  background:linear-gradient(180deg,#e8dcc0,#8a6a2f);
+  border-color:var(--poe-deep);border-radius:2px;
+}
+
+/* --- transport tray --- */
+html[data-theme="poe"] .transport{
+  border:1px solid var(--poe-deep);
+  border-top-color:var(--poe-metal-hi);
+  border-radius:3px;
+  margin:0 12px 10px;
+  background:linear-gradient(180deg,#2c2318,#181209);
+  box-shadow:inset 0 0 0 1px rgba(92,70,32,.28),inset 0 1px 0 rgba(107,90,60,.4),inset 0 -2px 6px rgba(0,0,0,.5);
+}
+
+/* --- list housings: nested bronze + gold hairline --- */
+html[data-theme="poe"] .pl-sidebar,
+html[data-theme="poe"] .pl-main,
+html[data-theme="poe"] .queue-panel{
+  border:1px solid var(--poe-deep);
+  border-top-color:var(--poe-metal-hi);
+  border-radius:3px;
+  background:#0f0b06;
+  box-shadow:inset 0 0 0 1px rgba(92,70,32,.38),inset 0 1px 0 rgba(107,90,60,.32),inset 0 0 16px rgba(0,0,0,.6);
+}
+html[data-theme="poe"] .pl-sidebar-head,
+html[data-theme="poe"] .qp-head{
+  background:linear-gradient(180deg,#2c2318,#1a140c);
+  color:var(--poe-gold);letter-spacing:2px;
+  border-bottom:1px solid var(--poe-gold-deep);
+}
+html[data-theme="poe"] .pl-sidebar-head::before,
+html[data-theme="poe"] .qp-head > span:first-child::before{
+  content:"\2726 ";color:var(--poe-gold-dim);
+}
+html[data-theme="poe"] .pl-search,
+html[data-theme="poe"] .pl-foot,
+html[data-theme="poe"] .qp-foot{
+  background:linear-gradient(180deg,#241d14,#150f09);
+  color:var(--poe-gold-dim);
+}
+html[data-theme="poe"] .qp-head--lists{border-top-color:var(--poe-gold-deep);}
+
+/* recessed inputs with a gold focus keyline */
+html[data-theme="poe"] .pl-search input,
+html[data-theme="poe"] .modal-input,
+html[data-theme="poe"] .sl-select,
+html[data-theme="poe"] #auth-headers{
+  border:1px solid var(--poe-deep);border-radius:2px;
+  background:#0a0603;color:var(--poe-gold);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+html[data-theme="poe"] .pl-search input:focus,
+html[data-theme="poe"] .modal-input:focus{
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 1px var(--poe-gold-dim),0 0 8px var(--poe-gold-glow);
+}
+
+/* --- resize splitters --- */
+html[data-theme="poe"] .splitter{
+  background:linear-gradient(180deg,#33291d,#181209);
+  border-left:1px solid var(--poe-deep);
+  border-right:1px solid var(--poe-gold-deep);
+}
+html[data-theme="poe"] .splitter:hover{background:var(--poe-gold-dim);}
+
+/* --- gold XP-bar ticks along the top of the toggle strip --- */
+html[data-theme="poe"] .pled-toggles{position:relative;}
+html[data-theme="poe"] .pled-toggles::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:2px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--poe-gold) 0 7px,transparent 7px 10px);
+  opacity:.65;
+}
+
+/* --- floating surfaces --- */
+html[data-theme="poe"] .ctx-menu,
+html[data-theme="poe"] .modal-card,
+html[data-theme="poe"] .theme-pop,
+html[data-theme="poe"] .toast,
+html[data-theme="poe"] .auth-card{
+  border:1px solid var(--poe-deep);border-radius:3px;
+  background:linear-gradient(180deg,#2c2318,#150f09);
+  box-shadow:inset 0 0 0 1px var(--poe-gold-deep),inset 0 1px 0 var(--poe-metal-hi),0 8px 22px rgba(0,0,0,.65);
+}
+
+/* --- scrollbars --- */
+html[data-theme="poe"] ::-webkit-scrollbar{width:10px;height:10px;}
+html[data-theme="poe"] ::-webkit-scrollbar-track{background:#0a0603;border-radius:2px;}
+html[data-theme="poe"] ::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#4a3c2a,#1e1710);
+  border:1px solid var(--poe-deep);border-radius:2px;
+}
+html[data-theme="poe"] ::-webkit-scrollbar-thumb:hover{background:var(--poe-gold-dim);}
+
+
+/* ============================================================= *
+ *  Valorant — flat navy, crisp light hairlines, chamfers, red    *
+ *  ref: the PLAY menu — matte dark-navy, thin near-white edges,   *
+ *  notched corners, diamond markers, RED reserved for action.    *
+ *  No glow (matte, not neon). SEED.valorant title moved to navy. *
+ * ============================================================= */
+html[data-theme="valorant"]{
+  --val-navy-hi:#1e2f3d;
+  --val-navy:#132330;
+  --val-navy-lo:#0b141c;
+  --val-line:#cdd8de;      /* crisp cool-white hairline */
+  --val-line-dim:#46586a;
+  --val-red:#ff4655;
+  --val-red-deep:#cc313f;
+  --val-bone:#ece8e1;
+  --val-mint:#7fffd4;
+  --val-notch:polygon(0 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%);
+}
+
+/* --- window shells: flat navy, thin light hairline, sharp --- */
+html[data-theme="valorant"] #main,
+html[data-theme="valorant"] #pled{
+  border:1px solid var(--val-line-dim);
+  border-radius:0;
+  background:linear-gradient(180deg,#15242f,var(--val-navy) 40%);
+  box-shadow:
+    inset 0 0 0 1px rgba(205,216,222,.1),
+    inset 0 0 30px rgba(0,0,0,.4),
+    0 3px 10px rgba(0,0,0,.55);
+}
+html[data-theme="valorant"] #pled{margin-top:4px;}
+
+/* --- title bars (navy from SEED) --- */
+html[data-theme="valorant"] .titlebar{
+  border-radius:0;
+  border-bottom:1px solid var(--val-line-dim);
+  background:linear-gradient(180deg,#1e2f3d,#0f1923);
+  box-shadow:inset 0 -2px 0 var(--val-red);
+}
+html[data-theme="valorant"] .titlebar--sub{box-shadow:inset 0 -1px 0 var(--val-line-dim);}
+html[data-theme="valorant"] .title-text{
+  color:var(--val-bone);letter-spacing:3px;text-shadow:0 1px 0 #000;
+}
+html[data-theme="valorant"] #main .title-text::before{
+  content:"\25C6 ";color:var(--val-red);font-size:8px;
+}
+
+/* --- shared button recipe: flat navy, thin light frame, notched corner --- */
+html[data-theme="valorant"] .title-btns button,
+html[data-theme="valorant"] .tp,
+html[data-theme="valorant"] #q-mode,
+html[data-theme="valorant"] .pl-search button,
+html[data-theme="valorant"] .pled-toggles button,
+html[data-theme="valorant"] .sl-toolbar button,
+html[data-theme="valorant"] .qp-head button,
+html[data-theme="valorant"] .theme-reset,
+html[data-theme="valorant"] .modal-btns button,
+html[data-theme="valorant"] #auth-connect{
+  border:1px solid var(--val-line-dim);
+  border-radius:0;
+  background:var(--val-navy-hi);
+  color:var(--val-bone);
+  text-shadow:none;
+  box-shadow:none;
+  clip-path:var(--val-notch);
+}
+html[data-theme="valorant"] .tp:hover,
+html[data-theme="valorant"] .title-btns button:hover,
+html[data-theme="valorant"] .pl-search button:hover,
+html[data-theme="valorant"] .pled-toggles button:hover,
+html[data-theme="valorant"] .sl-toolbar button:hover,
+html[data-theme="valorant"] .qp-head button:hover{
+  border-color:var(--val-line);
+  background:#25384a;
+}
+html[data-theme="valorant"] .tp:active,
+html[data-theme="valorant"] .title-btns button:active,
+html[data-theme="valorant"] .pl-search button:active{
+  background:var(--val-navy-lo);
+}
+
+/* lit toggles + primary CTAs = solid Valorant red, sharp white legend */
+html[data-theme="valorant"] .tp.toggle.on,
+html[data-theme="valorant"] #sl-push,
+html[data-theme="valorant"] #modal-ok,
+html[data-theme="valorant"] .big-btn{
+  background:var(--val-red);
+  color:#fff;font-weight:bold;
+  border:1px solid var(--val-red-deep);
+  text-shadow:none;
+  box-shadow:0 0 0 1px rgba(255,70,85,.35);
+}
+html[data-theme="valorant"] .pled-toggles button.on{
+  color:var(--val-red);border-color:var(--val-red);
+  text-shadow:none;
+}
+
+/* --- the screen: flat black, thin light keyline, red top tab, corner ticks, hanging diamond --- */
+html[data-theme="valorant"] .display{
+  position:relative;
+  margin:11px;
+  border:1px solid var(--val-line-dim);
+  border-top:2px solid var(--val-red);
+  border-radius:0;
+  background:#0a1119;
+  box-shadow:inset 0 0 0 1px rgba(205,216,222,.14),0 2px 8px rgba(0,0,0,.55);
+}
+/* four crisp light corner brackets */
+html[data-theme="valorant"] .display::before{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background-repeat:no-repeat;
+  background-image:
+    linear-gradient(var(--val-line),var(--val-line)),linear-gradient(var(--val-line),var(--val-line)),
+    linear-gradient(var(--val-line),var(--val-line)),linear-gradient(var(--val-line),var(--val-line)),
+    linear-gradient(var(--val-line),var(--val-line)),linear-gradient(var(--val-line),var(--val-line)),
+    linear-gradient(var(--val-line),var(--val-line)),linear-gradient(var(--val-line),var(--val-line));
+  background-size:10px 1px,1px 10px, 10px 1px,1px 10px, 10px 1px,1px 10px, 10px 1px,1px 10px;
+  background-position:
+    left top,left top, right top,right top,
+    left bottom,left bottom, right bottom,right bottom;
+}
+/* diamond hanging off the bottom-centre (Valorant banner tail) */
+html[data-theme="valorant"] .display::after{
+  content:"\25C6";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);
+  z-index:2;pointer-events:none;
+  font-size:9px;line-height:1;color:var(--val-line-dim);
+}
+
+html[data-theme="valorant"] .marquee,
+html[data-theme="valorant"] .bar{
+  border-radius:0;border-color:var(--val-line-dim);background:#0a1119;
+}
+html[data-theme="valorant"] .bar .fill{
+  background:var(--val-mint);opacity:.85;
+}
+html[data-theme="valorant"] .bar .thumb{
+  background:var(--val-line);border-color:var(--val-navy-lo);border-radius:0;
+}
+
+/* --- transport --- */
+html[data-theme="valorant"] .transport{
+  border:1px solid var(--val-line-dim);
+  border-radius:0;margin:0 11px 10px;
+  background:var(--val-navy);
+  box-shadow:inset 0 0 0 1px rgba(205,216,222,.08);
+}
+
+/* --- list housings --- */
+html[data-theme="valorant"] .pl-sidebar,
+html[data-theme="valorant"] .pl-main,
+html[data-theme="valorant"] .queue-panel{
+  border:1px solid var(--val-line-dim);
+  border-top:2px solid var(--val-line);
+  border-radius:0;
+  background:var(--val-navy);
+  box-shadow:inset 0 0 0 1px rgba(205,216,222,.06);
+}
+html[data-theme="valorant"] .pl-sidebar-head,
+html[data-theme="valorant"] .qp-head{
+  background:var(--val-navy-hi);color:var(--val-bone);letter-spacing:2px;
+  border-bottom:1px solid var(--val-line-dim);
+}
+html[data-theme="valorant"] .pl-sidebar-head::before,
+html[data-theme="valorant"] .qp-head > span:first-child::before{
+  content:"\25C6 ";color:var(--val-red);
+}
+html[data-theme="valorant"] .pl-search,
+html[data-theme="valorant"] .pl-foot,
+html[data-theme="valorant"] .qp-foot{
+  background:var(--val-navy-hi);color:#8fa0ac;
+}
+html[data-theme="valorant"] .qp-head--lists{border-top-color:var(--val-line-dim);}
+
+/* recessed inputs, red focus edge */
+html[data-theme="valorant"] .pl-search input,
+html[data-theme="valorant"] .modal-input,
+html[data-theme="valorant"] .sl-select,
+html[data-theme="valorant"] #auth-headers{
+  border:1px solid var(--val-line-dim);border-radius:0;
+  background:#0a1119;color:var(--val-mint);
+}
+html[data-theme="valorant"] .pl-search input:focus,
+html[data-theme="valorant"] .modal-input:focus{
+  border-color:var(--val-red);
+  box-shadow:0 0 0 1px rgba(255,70,85,.3);
+}
+
+/* --- resize splitters --- */
+html[data-theme="valorant"] .splitter{
+  background:var(--val-line-dim);
+  border-left:1px solid var(--val-navy-lo);border-right:1px solid var(--val-navy-lo);
+}
+html[data-theme="valorant"] .splitter:hover{background:var(--val-red);}
+
+/* --- floating surfaces --- */
+html[data-theme="valorant"] .ctx-menu,
+html[data-theme="valorant"] .modal-card,
+html[data-theme="valorant"] .theme-pop,
+html[data-theme="valorant"] .toast,
+html[data-theme="valorant"] .auth-card{
+  border:1px solid var(--val-line-dim);border-radius:0;
+  background:var(--val-navy);
+  box-shadow:inset 0 0 0 1px rgba(205,216,222,.1),0 8px 22px rgba(0,0,0,.6);
+}
+
+/* --- scrollbars --- */
+html[data-theme="valorant"] ::-webkit-scrollbar{width:9px;height:9px;}
+html[data-theme="valorant"] ::-webkit-scrollbar-track{background:#0a1119;}
+html[data-theme="valorant"] ::-webkit-scrollbar-thumb{
+  background:#3a4c5c;border:1px solid var(--val-navy-lo);border-radius:0;
+}
+html[data-theme="valorant"] ::-webkit-scrollbar-thumb:hover{background:var(--val-red);}
+
+
+/* ============================================================= *
+ *  Dota 2 — cold charcoal HUD metal, teal + gold accents         *
+ *  ref: the default action bar — desaturated slate, subtle       *
+ *  bevel, teal keyline, gold structural bits, understated/worn.  *
+ *  SEED.dota2 reworked warm-brown -> cold-charcoal + teal.       *
+ * ============================================================= */
+html[data-theme="dota2"]{
+  --d2-slate-hi:#485053;
+  --d2-slate:#2b3133;
+  --d2-slate-lo:#1a1e20;
+  --d2-deep:#0e1011;
+  --d2-teal:#6fd0e8;
+  --d2-teal-dim:#3a8296;
+  --d2-teal-deep:#234c58;
+  --d2-gold:#c8a05a;
+  --d2-gold-dim:#7a6236;
+  --d2-grey:#c3c8c9;
+}
+
+/* --- window shells: cold charcoal, soft bevel, slight curve --- */
+html[data-theme="dota2"] #main,
+html[data-theme="dota2"] #pled{
+  border:1px solid var(--d2-deep);
+  border-top-color:var(--d2-slate-hi);
+  border-radius:6px;
+  background:linear-gradient(180deg,#333b3d,#232a2c 14px,#191e20 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(122,98,54,.16),
+    inset 0 1px 0 var(--d2-slate-hi),
+    inset 0 0 34px rgba(0,0,0,.45),
+    0 3px 11px rgba(0,0,0,.58);
+}
+html[data-theme="dota2"] #pled{margin-top:4px;}
+
+/* --- title bars --- */
+html[data-theme="dota2"] .titlebar{
+  border-radius:5px 5px 0 0;
+  border-bottom:1px solid var(--d2-gold-dim);
+  background:linear-gradient(180deg,#3a4245,#232a2c);
+  box-shadow:inset 0 1px 0 var(--d2-slate-hi);
+}
+html[data-theme="dota2"] .titlebar--sub{border-bottom-color:var(--d2-slate-lo);}
+html[data-theme="dota2"] .title-text{
+  color:var(--d2-grey);letter-spacing:2px;text-shadow:0 1px 0 #000;
+}
+html[data-theme="dota2"] #main .title-text::before{
+  content:"\25C8 ";color:var(--d2-teal-dim);
+}
+
+/* --- shared button recipe: charcoal bevel, grey legend --- */
+html[data-theme="dota2"] .title-btns button,
+html[data-theme="dota2"] .tp,
+html[data-theme="dota2"] #q-mode,
+html[data-theme="dota2"] .pl-search button,
+html[data-theme="dota2"] .pled-toggles button,
+html[data-theme="dota2"] .sl-toolbar button,
+html[data-theme="dota2"] .qp-head button,
+html[data-theme="dota2"] .theme-reset,
+html[data-theme="dota2"] .modal-btns button,
+html[data-theme="dota2"] #auth-connect{
+  border:1px solid var(--d2-deep);
+  border-top-color:var(--d2-slate-hi);
+  border-radius:4px;
+  background:linear-gradient(180deg,#3a4245 0%,#262c2e 55%,#1c2123 100%);
+  color:var(--d2-grey);
+  text-shadow:0 1px 0 #000;
+  box-shadow:inset 0 1px 0 rgba(72,80,83,.5),0 1px 2px rgba(0,0,0,.5);
+}
+html[data-theme="dota2"] .tp:hover,
+html[data-theme="dota2"] .title-btns button:hover,
+html[data-theme="dota2"] .pl-search button:hover,
+html[data-theme="dota2"] .pled-toggles button:hover,
+html[data-theme="dota2"] .sl-toolbar button:hover,
+html[data-theme="dota2"] .qp-head button:hover{
+  border-color:var(--d2-teal-dim);
+  box-shadow:inset 0 1px 0 rgba(72,80,83,.5),0 0 7px rgba(111,208,232,.2);
+}
+html[data-theme="dota2"] .tp:active,
+html[data-theme="dota2"] .title-btns button:active,
+html[data-theme="dota2"] .pl-search button:active{
+  background:linear-gradient(180deg,#1c2123,#262c2e);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+
+/* lit toggles + primary CTAs = warm gold (Dota "active" key) */
+html[data-theme="dota2"] .tp.toggle.on,
+html[data-theme="dota2"] #sl-push,
+html[data-theme="dota2"] #modal-ok,
+html[data-theme="dota2"] .big-btn{
+  background:linear-gradient(180deg,#dcb972,#a87f3c);
+  color:#1a1206;
+  border:1px solid #4a3a18;border-top-color:#f0d59a;
+  text-shadow:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 0 10px rgba(200,160,90,.35);
+}
+html[data-theme="dota2"] .pled-toggles button.on{
+  color:var(--d2-gold);border-top-color:#f0d59a;
+  text-shadow:0 0 6px rgba(200,160,90,.35);
+}
+
+/* --- the screen: near-black, teal keyline, charcoal surround, nested teal frame + gold rivets --- */
+html[data-theme="dota2"] .display{
+  position:relative;
+  margin:12px;
+  border:0;
+  border-radius:6px;
+  background:#0a0d0e;
+  box-shadow:
+    inset 0 0 0 2px var(--d2-teal-deep),
+    inset 0 0 16px rgba(111,208,232,.16),
+    0 0 0 3px var(--d2-slate),
+    0 0 0 4px var(--d2-deep),
+    0 0 0 6px var(--d2-slate-hi),
+    0 0 0 8px var(--d2-deep),
+    0 3px 12px rgba(0,0,0,.62);
+}
+html[data-theme="dota2"] .display::before{
+  content:"";position:absolute;inset:4px;pointer-events:none;z-index:1;
+  border:1px solid rgba(111,208,232,.22);border-radius:3px;
+}
+html[data-theme="dota2"] .display::after{
+  content:"";position:absolute;inset:-3px;pointer-events:none;
+  background-repeat:no-repeat;
+  background-image:
+    radial-gradient(circle 3.5px at 8px 8px,             #f0d59a 0 22%,var(--d2-gold) 45%,var(--d2-gold-dim) 72%,transparent 74%),
+    radial-gradient(circle 3.5px at calc(100% - 8px) 8px,#f0d59a 0 22%,var(--d2-gold) 45%,var(--d2-gold-dim) 72%,transparent 74%),
+    radial-gradient(circle 3.5px at 8px calc(100% - 8px),#f0d59a 0 22%,var(--d2-gold) 45%,var(--d2-gold-dim) 72%,transparent 74%),
+    radial-gradient(circle 3.5px at calc(100% - 8px) calc(100% - 8px),#f0d59a 0 22%,var(--d2-gold) 45%,var(--d2-gold-dim) 72%,transparent 74%);
+}
+
+html[data-theme="dota2"] .marquee,
+html[data-theme="dota2"] .bar{
+  border-radius:3px;border-color:var(--d2-deep);
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.6);
+}
+html[data-theme="dota2"] .bar .fill{
+  background:linear-gradient(180deg,var(--d2-teal),var(--d2-teal-dim));opacity:.88;
+}
+html[data-theme="dota2"] .bar .thumb{
+  background:linear-gradient(180deg,#f0d59a,#a87f3c);
+  border-color:var(--d2-deep);border-radius:2px;
+}
+
+/* --- transport tray --- */
+html[data-theme="dota2"] .transport{
+  border:1px solid var(--d2-deep);
+  border-top-color:var(--d2-slate-hi);
+  border-radius:5px;
+  margin:0 12px 10px;
+  background:linear-gradient(180deg,#2b3133,#191e20);
+  box-shadow:inset 0 0 0 1px rgba(122,98,54,.14),inset 0 1px 0 rgba(72,80,83,.4),inset 0 -2px 6px rgba(0,0,0,.5);
+}
+
+/* --- list housings --- */
+html[data-theme="dota2"] .pl-sidebar,
+html[data-theme="dota2"] .pl-main,
+html[data-theme="dota2"] .queue-panel{
+  border:1px solid var(--d2-deep);
+  border-top-color:var(--d2-slate-hi);
+  border-radius:5px;
+  background:#121617;
+  box-shadow:inset 0 0 0 1px rgba(122,98,54,.14),inset 0 1px 0 rgba(72,80,83,.3),inset 0 0 16px rgba(0,0,0,.55);
+}
+html[data-theme="dota2"] .pl-sidebar-head,
+html[data-theme="dota2"] .qp-head{
+  background:linear-gradient(180deg,#2b3133,#1a1e20);
+  color:var(--d2-teal);letter-spacing:2px;
+  border-bottom:1px solid var(--d2-gold-dim);
+}
+html[data-theme="dota2"] .pl-sidebar-head::before,
+html[data-theme="dota2"] .qp-head > span:first-child::before{
+  content:"\25C8 ";color:var(--d2-teal-dim);
+}
+html[data-theme="dota2"] .pl-search,
+html[data-theme="dota2"] .pl-foot,
+html[data-theme="dota2"] .qp-foot{
+  background:linear-gradient(180deg,#232a2c,#161a1b);
+  color:var(--d2-teal-dim);
+}
+html[data-theme="dota2"] .qp-head--lists{border-top-color:var(--d2-gold-dim);}
+
+/* recessed inputs with a teal focus keyline */
+html[data-theme="dota2"] .pl-search input,
+html[data-theme="dota2"] .modal-input,
+html[data-theme="dota2"] .sl-select,
+html[data-theme="dota2"] #auth-headers{
+  border:1px solid var(--d2-deep);border-radius:3px;
+  background:#0a0d0e;color:var(--d2-teal);
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6);
+}
+html[data-theme="dota2"] .pl-search input:focus,
+html[data-theme="dota2"] .modal-input:focus{
+  box-shadow:inset 0 2px 4px rgba(0,0,0,.6),0 0 0 1px var(--d2-teal-dim),0 0 8px rgba(111,208,232,.35);
+}
+
+/* --- resize splitters --- */
+html[data-theme="dota2"] .splitter{
+  background:linear-gradient(180deg,#2b3133,#191e20);
+  border-left:1px solid var(--d2-deep);
+  border-right:1px solid var(--d2-gold-dim);
+}
+html[data-theme="dota2"] .splitter:hover{background:var(--d2-teal-dim);}
+
+/* --- floating surfaces --- */
+html[data-theme="dota2"] .ctx-menu,
+html[data-theme="dota2"] .modal-card,
+html[data-theme="dota2"] .theme-pop,
+html[data-theme="dota2"] .toast,
+html[data-theme="dota2"] .auth-card{
+  border:1px solid var(--d2-deep);border-radius:5px;
+  background:linear-gradient(180deg,#2b3133,#161a1b);
+  box-shadow:inset 0 0 0 1px rgba(122,98,54,.14),inset 0 1px 0 var(--d2-slate-hi),0 8px 22px rgba(0,0,0,.6);
+}
+
+/* --- scrollbars --- */
+html[data-theme="dota2"] ::-webkit-scrollbar{width:10px;height:10px;}
+html[data-theme="dota2"] ::-webkit-scrollbar-track{background:#0a0d0e;border-radius:3px;}
+html[data-theme="dota2"] ::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#3a4245,#1c2123);
+  border:1px solid var(--d2-deep);border-radius:3px;
+}
+html[data-theme="dota2"] ::-webkit-scrollbar-thumb:hover{background:var(--d2-teal-dim);}

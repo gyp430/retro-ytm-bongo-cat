@@ -1,0 +1,5 @@
+Flask>=3.0.0
+flask-cors>=6.0.0          # 4.x/5.x had several CVEs (CVE-2024-6221/-6839/-6866/-1681)
+ytmusicapi>=1.12.0
+requests>=2.31.0
+yt-dlp>=2025.1.1           # the /download + /stream endpoints (on-demand stream-rip); keep fresh

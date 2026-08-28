@@ -1,0 +1,52 @@
+{
+  "name": "retro-ytm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Winamp-style desktop player for YouTube Music Premium (Electron + ytmusicapi + YouTube IFrame player)",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "setup": "python -m pip install -r py/requirements.txt",
+    "dist:sidecar": "pyinstaller --noconfirm --clean retro-sidecar.spec",
+    "dist": "npm run dist:sidecar && electron-builder --win",
+    "pack": "electron-builder --dir",
+    "postinstall": "node -e \"console.log('\\nNow run: npm run setup   (installs the Python side)\\n')\""
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.retroytm.bongocat",
+    "productName": "Retro YTM Bongo Cat",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/server",
+        "to": "sidecar"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "RetroYTM-BongoCat-${version}-portable.${ext}"
+    },
+    "portable": {
+      "unpackDirName": "RetroYTM-BongoCat"
+    }
+  }
+}

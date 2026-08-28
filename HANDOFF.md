@@ -264,7 +264,7 @@ visualiser is faked (reacts to play/pause, not real FFT).
 | **"Stream everything" mode** (backlog #6 — real visualiser + beat cat on *every* track) | **done 2026-08-28** — §5g. `⚙` → *Stream everything* checkbox (`retro.streamAll`, default off). `playAt` routes non-local YT tracks through `streamTrack(t, quiet)`; `prefetchNextIfBlocked` always warms the next track while on. **Not verified in-app** (needs `npm start` + a listen — this also finally exercises the bongo-cat beat detector against real music). |
 | **ARTIST MIX panel** | **done 2026-08-28** — §5h. `#aq-section` in the queue column: a pool of artists (add by search via new `GET /search-artists`, or drag from FOR YOU) that shuffles random songs from random pooled artists into the queue when armed. Mutually exclusive with radio. **Needs `npm start`** (server route) + an in-app check. |
 | Game-skin visual QA | **outstanding** — the 6 game skins were verified structurally, **never eyeballed in the running Electron app**. Do a pass on `npm start`. |
-| Package → portable .exe | **done 2026-08-28** — §9. `retro-sidecar.spec` (PyInstaller onedir: `server.py` + bundled `renderer/` + `ytmusicapi` + `yt_dlp`) → `package.json → build` (electron-builder `portable`) → **`release/RetroYTM-BongoCat-1.0.0-portable.exe`** (~91 MB). Frozen sidecar smoke-tested (health / UI / all routes / yt-dlp all OK). GUI launch of the packaged exe not yet done by a human. No ffmpeg bundled (downloads stay `.m4a`); unsigned; default Electron icon. See **QA.md**. |
+| Package → portable .exe | **done 2026-08-28** — §9. `retro-sidecar.spec` (PyInstaller onedir: `server.py` + bundled `renderer/` + `ytmusicapi` + `yt_dlp`) → `package.json → build` (electron-builder `portable`) → **`release/RetroYTM-BongoCat-1.0.0-portable.exe`** (~91 MB). Frozen sidecar smoke-tested (health / UI / all routes / yt-dlp all OK). GUI launch of the packaged exe not yet done by a human. No ffmpeg bundled (downloads stay `.m4a`); unsigned. **Bongo-cat app icon added 2026-08-28** (`build/make-icon.py` → `build/icon.ico` + `renderer/icon.png`, wired via `build.win.icon` + `BrowserWindow({icon})`). See **QA.md**. |
 
 ---
 
@@ -1280,7 +1280,15 @@ double-clicking the portable exe and going through Google sign-in.
 
 ### Not covered / next
 - **Unsigned** — SmartScreen "unknown publisher". Needs a code-signing cert.
-- **No app icon** — default Electron icon. Add `build/icon.ico` + `win.icon`.
+- ~~**No app icon**~~ — **done 2026-08-28.** `build/make-icon.py` (Pillow, no
+  SVG rasteriser) programmatically redraws the in-app bongo-cat mascot on the
+  black-screen / green-LCD surface → `build/icon.ico` (16…256) + `build/icon.png`
+  + `renderer/icon.png` (runtime copy). `package.json → build.win.icon` =
+  `build/icon.ico` (portable .exe icon); `electron/main.js` `APP_ICON` =
+  `renderer/icon.png`, passed as `icon:` to all three `BrowserWindow`s (dev +
+  packaged taskbar/window icon). `.gitignore` switched `build/` → `build/*` with
+  negations so the icon source/output commit but PyInstaller's `build/retro-sidecar/`
+  work dir stays ignored. Re-run `python build/make-icon.py` to regenerate.
 - **No ffmpeg** — `/download` + streamed tracks stay `.m4a`. Optionally ship a
   static ffmpeg and point yt-dlp's `ffmpeg_location` at it.
 - Port 8765 is hard-coded-ish (`RETRO_YTM_PORT` env, default 8765); no

@@ -1,10 +1,16 @@
 # deps / build output
 node_modules/
 dist/
-build/
 release/
 __pycache__/
 *.pyc
+
+# build/ is electron-builder's buildResources dir — its contents are generated
+# (PyInstaller work dir, etc.), except the committed app-icon source + output
+build/*
+!build/icon.ico
+!build/icon.png
+!build/make-icon.py
 
 # Contains your YouTube Music auth cookies — never commit this
 py/browser.json

@@ -618,6 +618,12 @@ button{font:inherit;color:var(--text);cursor:pointer;}
 .big-btn:active{padding-top:14px;padding-bottom:10px;}
 .big-btn[disabled]{opacity:.55;box-shadow:none;cursor:default;}
 #auth-msg{font-size:10px;color:var(--toggle-on-a);margin-top:10px;min-height:12px;}
+.auth-skip{
+  display:block;width:100%;margin-top:10px;padding:7px;
+  background:transparent;border:1px dashed var(--bevel-dark);
+  color:var(--text-dim);font-size:10px;cursor:pointer;
+}
+.auth-skip:hover{color:var(--text-strong);border-color:var(--text-dim);}
 .auth-adv{margin-top:14px;font-size:10px;color:var(--text-dim);}
 .auth-adv summary{cursor:pointer;}
 #auth-headers{

@@ -146,6 +146,16 @@ which writes `py/browser.json`. Same session backs the player → Premium on at
 the same time. The **◍** title-bar button re-runs this (switch account / cookie
 expired). Header-paste is a fallback under "Advanced".
 
+**Offline mode (2026-08-28):** the first-run overlay is no longer a hard gate.
+A **"Skip — use as an offline player (local files only)"** button (`#auth-skip`
+in `.auth-card`) hides the overlay and sets `localStorage['retro.offline']='1'`
+so later launches don't re-prompt (`boot()` checks `offlineChosen()`; the flag is
+cleared the instant `onConnected()` fires). In offline mode search / playlists /
+radio / FOR YOU stay disabled (their existing `!state.authed` guards) but
+local-file import + playback + the real-FFT visualiser all work. The **◍**
+button always re-opens the sign-in overlay. `goOffline()` / `onConnected()` in
+`app.js`.
+
 Auth state as of writing: the user has completed sign-in; `py/browser.json`
 exists and `/health` returns `authed:true`.
 

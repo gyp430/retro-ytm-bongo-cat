@@ -116,6 +116,7 @@
     authHeaders: $('auth-headers'),
     authConnect: $('auth-connect'),
     authMsg: $('auth-msg'),
+    authSkip: $('auth-skip'),
   };
 
   // ---- state ------------------------------------------------------------
@@ -3047,13 +3048,27 @@
   };
 
   // ---- auth flow ------------------------------------------
+  // "offline mode" = the user dismissed the first-run sign-in and just wants a
+  // local-file player. Persisted so it doesn't nag on every launch; cleared the
+  // moment they actually connect. The ◍ titlebar button always re-opens sign-in.
+  const LS_OFFLINE = 'retro.offline';
+  const offlineChosen = () => localStorage.getItem(LS_OFFLINE) === '1';
+
   function onConnected() {
     state.authed = true;
+    localStorage.removeItem(LS_OFFLINE);
     el.authMsg.textContent = 'connected!';
     el.auth.classList.add('hidden');
     loadPlaylists();
     loadForYou(true);
     renderListUI();
+  }
+
+  function goOffline() {
+    localStorage.setItem(LS_OFFLINE, '1');
+    el.auth.classList.add('hidden');
+    recsMsg('offline mode — sign in via ◍ for search, playlists & radio');
+    toast('offline mode — import audio via ⚙ or drag files onto the window');
   }
 
   async function connectGoogle() {
@@ -3078,6 +3093,7 @@
     }
   }
   el.authGoogle.onclick = connectGoogle;
+  el.authSkip.onclick = goOffline;
 
   el.authConnect.onclick = async () => {
     const headers = el.authHeaders.value.trim();
@@ -3338,6 +3354,10 @@
         el.auth.classList.add('hidden');
         loadPlaylists();
         loadForYou();
+      } else if (offlineChosen()) {
+        // user picked "offline player" on a previous run — don't nag
+        el.auth.classList.add('hidden');
+        recsMsg('offline mode — sign in via ◍ for search, playlists & radio');
       } else {
         el.auth.classList.remove('hidden');
         recsMsg('connect to see recommendations');

@@ -273,6 +273,8 @@ visualiser is faked (reacts to play/pause, not real FFT).
 | **Stream-cache keep between sessions + LRU cap + clear button** (backlog #2) | **done 2026-08-28** — §5f.8. LRU eviction **verified** (temp-dir test); Electron IPC path not exercised outside `npm start`. |
 | **"Stream everything" mode** (backlog #6 — real visualiser + beat cat on *every* track) | **done 2026-08-28** — §5g. `⚙` → *Stream everything* checkbox (`retro.streamAll`, default off). `playAt` routes non-local YT tracks through `streamTrack(t, quiet)`; `prefetchNextIfBlocked` always warms the next track while on. **Not verified in-app** (needs `npm start` + a listen — this also finally exercises the bongo-cat beat detector against real music). |
 | **ARTIST MIX panel** | **done 2026-08-28** — §5h. `#aq-section` in the queue column: a pool of artists (add by search via new `GET /search-artists`, or drag from FOR YOU) that shuffles random songs from random pooled artists into the queue when armed. Mutually exclusive with radio. **Needs `npm start`** (server route) + an in-app check. |
+| **Offline mode** (skip first-run Google sign-in) | **done 2026-08-30** — §2. `#auth-skip` hides the gate + persists `retro.offline`; `◍` reopens it. **Verified** (served page, forced overlay → skip). |
+| **"Restore queue on startup"** (queue + track + position survive a restart) | **done 2026-08-30** — §5i. `⚙` → *Queue* checkbox (`retro.keepQueue`, default off) → `retro.session`. `player.js` `cue()`. **Verified** via a served sidecar + seeded session: restore order/`qi`/`pos`, marquee, toggle-off clear, re-save on queue edit. Live position-write-while-playing not exercised (sandbox can't drive the YT iframe). |
 | Game-skin visual QA | **outstanding** — the 6 game skins were verified structurally, **never eyeballed in the running Electron app**. Do a pass on `npm start`. |
 | Package → portable .exe | **done 2026-08-28** — §9. `retro-sidecar.spec` (PyInstaller onedir: `server.py` + bundled `renderer/` + `ytmusicapi` + `yt_dlp`) → `package.json → build` (electron-builder `portable`) → **`release/RetroYTM-BongoCat-1.0.0-portable.exe`** (~91 MB). Frozen sidecar smoke-tested (health / UI / all routes / yt-dlp all OK). GUI launch of the packaged exe not yet done by a human. No ffmpeg bundled (downloads stay `.m4a`); unsigned. **Bongo-cat app icon added 2026-08-28** (`build/make-icon.py` → `build/icon.ico` + `renderer/icon.png`, wired via `build.win.icon` + `BrowserWindow({icon})`). See **QA.md**. |
 
@@ -564,9 +566,13 @@ YT err 101/150) · `retro.dlDir` (download folder abs path; absent =
 `eqHeight`, `eqCenter`, `eqBottom`, `eqGlow`, `eqCaps`; missing keys fall back to
 `TUNE_DEFAULTS` in `app.js`) ·
 **`retro.artistMix`** (JSON `[{id,name}]` — the ARTIST MIX pool, §5h) ·
-**`retro.artistMixOn`** (`'1'`/`'0'` — mix armed).
-Queue contents and
-imported local files are **not** persisted (object URLs die on reload). The
+**`retro.artistMixOn`** (`'1'`/`'0'` — mix armed) ·
+**`retro.keepQueue`** (`'1'`/`'0'` — "Restore queue on startup", default off, §5i) ·
+**`retro.session`** (JSON `{v,queue,qi,pos,ts}` — the saved queue; written only
+when `retro.keepQueue`, §5i).
+Imported local files are **not** persisted (object URLs die on reload) and are
+dropped from `retro.session`; the rest of the queue now **is** persisted when
+`retro.keepQueue` is on. The
 stream-cache keep/cap are also mirrored to `~/.retro-ytm-cache.json` for the
 Electron main process + sidecar (§5f.8).
 
@@ -1111,6 +1117,40 @@ into the queue as it runs low — a broader alternative to radio. All in `app.js
   both own the queue tail). `state.artistMixOn` is **not** cleared just because
   radio was the last thing toggled unless you toggle radio on.
 - `renderArtistMix()` on boot + every change.
+
+---
+
+## 5i "Restore queue on startup" — session persistence (2026-08-30)
+
+Opt-in `⚙` → **Queue → "Restore queue on startup"** checkbox (`#set-keep-queue`,
+`retro.keepQueue`, **default off**). When on, the app remembers the queue, the
+current track and its playback position between sessions and reopens **paused**.
+All in `app.js`.
+
+- **Store** `localStorage['retro.session']` = `{ v:1, queue:[…], qi, pos, ts }`.
+  `queue` entries are stripped to `SESSION_KEYS` (`videoId, title, artists, album,
+  duration, durationSeconds, thumbnail, artistId, setVideoId, isVideo`).
+- **`saveSession(immediate)`** — debounced 1200 ms; called at the end of
+  `renderQueue()` (covers every add/remove/reorder/clear/`playAt`), from a 5 s
+  throttle on `P.on('tick')` + `LA` `timeupdate` (`maybeSaveSessionPos`), and
+  `immediate` on `beforeunload` + when the option is toggled on. **Imported local
+  files (`videoId` `local:*`) are dropped** and `qi` re-mapped; a *streamed* YT
+  track keeps its real id so it restores (re-fetches). An **empty queue leaves
+  the last saved session alone** — it's only removed when the option is toggled
+  **off**. A guard skips saving while `resumePending` and nothing is playing, so
+  a restored-but-unplayed queue can't overwrite its own saved position with 0.
+- **`restoreSession()`** (boot, before the empty `renderQueue()`): rebuilds
+  `state.queue` / `state.qi` / `state.originTracks`, `renderQueue()` +
+  `highlightPlaying()` + `setNowPlaying()`, toasts "↺ queue restored — press Play
+  to resume". Sets `resumePending` + `sessionRestored`.
+- **Resume**: `player.js` gained **`cue(id, startSeconds)`** (`cueVideoById`, no
+  autoplay). `P.on('ready')` → `cueResumeIfPending()` cues the current track at
+  `pos`. The first **Play** (transport button or Space) → `consumeResume()`
+  clears `resumePending` + `statStart`s the track; `P.play()` resumes from the
+  cued position. Any `playAt()` also clears `resumePending`. `P.on('error')`
+  swallows errors for the not-yet-started restored track (flag `isAvailable`
+  false, no auto-advance / stream). `boot()`'s "starting local server…" marquee
+  is suppressed while `sessionRestored`.
 
 ---
 

@@ -70,6 +70,12 @@ window.RetroPlayer = (() => {
     load(id) {
       if (ready && id) yt.loadVideoById(id);
     },
+    // load without playing, positioned at startSeconds — used to restore a
+    // saved session so the first Play resumes where you left off
+    cue(id, startSeconds) {
+      if (ready && id)
+        yt.cueVideoById({ videoId: id, startSeconds: Math.max(0, startSeconds || 0) });
+    },
     play() {
       if (ready) yt.playVideo();
     },

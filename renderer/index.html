@@ -283,6 +283,14 @@
       track waits on a fetch (the next one is pre-warmed).</p>
     <button class="set-btn" id="set-zoom">Reset window zoom to 100%</button>
 
+    <h3>Queue</h3>
+    <label class="set-row set-row--check">
+      <input type="checkbox" id="set-keep-queue" /> <span>Restore queue on startup</span>
+    </label>
+    <p class="set-hint">Remembers the queue, the current track and its position
+      between sessions. Reopens paused — press Play to resume. Imported local
+      files are skipped (they don't survive a restart).</p>
+
     <h3>Visualizer</h3>
     <label class="set-row set-row--check">
       <input type="checkbox" id="set-vis-on" /> <span>Show visualizer</span>

@@ -27,6 +27,7 @@
     setCacheCap: $('set-cache-cap'),
     setCacheSize: $('set-cache-size'),
     setCacheClear: $('set-cache-clear'),
+    setKeepQueue: $('set-keep-queue'),
     setCat: $('set-cat'),
     tuneBeat: $('tune-beat'),
     tuneGroove: $('tune-groove'),
@@ -156,6 +157,8 @@
   let dlDir = localStorage.getItem('retro.dlDir') || ''; // '' = default (~/Downloads/Retro YTM)
   let cacheKeep = localStorage.getItem('retro.keepCache') === '1';
   let cacheCapMB = +localStorage.getItem('retro.cacheCapMB') || 500;
+  let keepQueue = localStorage.getItem('retro.keepQueue') === '1'; // restore queue on startup
+  const LS_SESSION = 'retro.session';
   const LA = el.localAudio;
 
   // ---- helpers --------------------------------------------------------
@@ -278,6 +281,7 @@
   window.addEventListener('beforeunload', () => {
     statFlush();
     statSave(true);
+    saveSession(true); // final flush of queue + position for "restore on startup"
   });
 
   // ---- marquee ------------------------------------------------------
@@ -546,8 +550,109 @@
     el.queueFoot.textContent = state.queue.length
       ? `${state.queue.length} tracks · ${upcoming.length} up next · ${mmss(left)} left`
       : 'drop tracks here';
+    saveSession(); // ⚙ "Restore queue on startup" — debounced, no-op when off
   }
   let dragPayload = null;
+
+  // ---- session persistence — ⚙ "Restore queue on startup" ---------------
+  // Saves the queue + current index + playback position to localStorage so the
+  // app can reopen where you left off (paused). Imported local files are
+  // dropped — their object URLs die on exit.
+  const SESSION_KEYS = [
+    'videoId', 'title', 'artists', 'album',
+    'duration', 'durationSeconds', 'thumbnail', 'artistId', 'setVideoId', 'isVideo',
+  ];
+  // an imported local file (videoId "local:N") can't be restored — its object
+  // URL dies on exit. A *streamed* YT track carries isLocal too but has a real
+  // videoId, so it restores fine (it just re-fetches), hence the id-only test.
+  const isLocalTrack = (t) => !t || !t.videoId || String(t.videoId).startsWith('local:');
+  let sessionSaveT = 0;
+  function saveSession(immediate) {
+    if (!keepQueue) return;
+    // don't overwrite a saved position with 0 before the user resumes it
+    if (resumePending && !P.snapshot().playing && !localPlaying) return;
+    clearTimeout(sessionSaveT);
+    const run = () => {
+      const kept = [];
+      let qi = -1;
+      let curKept = false;
+      state.queue.forEach((t, i) => {
+        if (isLocalTrack(t)) return;
+        if (i === state.qi) {
+          qi = kept.length;
+          curKept = true;
+        }
+        const o = {};
+        for (const k of SESSION_KEYS) if (t[k] != null) o[k] = t[k];
+        kept.push(o);
+      });
+      // empty queue → leave the last saved session alone (the app boots with an
+      // empty queue transiently, and a stopped player isn't "forget my queue").
+      // The session is only dropped when the user turns the option off.
+      if (!kept.length) return;
+      if (qi < 0) qi = 0; // current track was a local file → start at the top
+      let pos = 0;
+      if (curKept) {
+        pos = localActive ? LA.currentTime || 0 : P.snapshot().cur || 0;
+        if (!isFinite(pos) || pos < 0) pos = 0;
+      }
+      try {
+        localStorage.setItem(
+          LS_SESSION,
+          JSON.stringify({ v: 1, queue: kept, qi, pos, ts: Date.now() })
+        );
+      } catch (_) {}
+    };
+    immediate ? run() : (sessionSaveT = setTimeout(run, 1200));
+  }
+
+  let resumePending = false; // a restored queue is cued but not yet played
+  let sessionRestored = false; // stays true for the session — guards boot messaging
+  let resumePos = 0;
+  function restoreSession() {
+    if (!keepQueue) return false;
+    let s;
+    try { s = JSON.parse(localStorage.getItem(LS_SESSION)); } catch (_) {}
+    if (!s || !Array.isArray(s.queue) || !s.queue.length) return false;
+    sessionRestored = true;
+    state.queue = s.queue.map((t) => ({ ...t, isAvailable: true }));
+    state.qi = Math.max(0, Math.min(state.queue.length - 1, s.qi | 0));
+    state.originTracks = state.queue.slice();
+    resumePos = Math.max(0, +s.pos || 0);
+    resumePending = true;
+    renderQueue();
+    highlightPlaying();
+    setNowPlaying(state.queue[state.qi]);
+    el.kbps.textContent = '256';
+    el.khz.textContent = '48';
+    toast('↺ queue restored — press Play to resume');
+    return true;
+  }
+  // once the YT IFrame player is ready, cue the restored track at its position
+  function cueResumeIfPending() {
+    if (!resumePending) return;
+    const t = state.queue[state.qi];
+    if (t && t.videoId && !isLocalTrack(t)) {
+      try { P.cue(t.videoId, resumePos); } catch (_) {}
+    } else {
+      resumePending = false;
+    }
+  }
+  // the user's first Play on a restored queue: take ownership + start stats
+  function consumeResume() {
+    if (!resumePending) return;
+    resumePending = false;
+    const t = state.queue[state.qi];
+    if (t) statStart(t);
+  }
+  let lastPosSave = 0;
+  function maybeSaveSessionPos() {
+    if (!keepQueue) return;
+    const now = Date.now();
+    if (now - lastPosSave < 5000) return;
+    lastPosSave = now;
+    saveSession(true);
+  }
 
   // drops onto empty queue space / below the last row → append
   el.queueList.addEventListener('dragover', (e) => {
@@ -953,6 +1058,7 @@
   // ---- playback control ----------------------------------------
   function playAt(i) {
     if (i < 0 || i >= state.queue.length) return;
+    resumePending = false; // any explicit play supersedes a restored-but-unplayed queue
     state.qi = i;
     const t = state.queue[i];
     if (!t || !t.videoId) return next();
@@ -1371,7 +1477,7 @@
   P.on('ready', () => {
     P.setVolume(loadVol());
     paintVol();
-    if (!state.authed) setNowPlaying(null);
+    if (resumePending) cueResumeIfPending(); // restore a saved session, paused
     else setNowPlaying(null);
   });
   P.on('state', (st) => {
@@ -1382,7 +1488,10 @@
   P.on('tick', (s) => {
     if (videoActive || localActive) return; // another source owns the readout
     if (!s.ready) return;
-    if (s.playing) statTick();
+    if (s.playing) {
+      statTick();
+      maybeSaveSessionPos();
+    }
     paintTime(s.cur, s.dur);
   });
   let skipRun = 0;
@@ -1396,6 +1505,13 @@
     if (videoActive || localActive) return; // the YT player isn't the source
     console.warn('yt error', code);
     const cur = state.queue[state.qi];
+    // a restored-but-not-yet-played track: just flag it, don't auto-advance or
+    // start streaming before the user has even pressed Play
+    if (resumePending) {
+      if (cur) cur.isAvailable = false;
+      highlightPlaying();
+      return;
+    }
     const embedBlocked = code === 101 || code === 150;
     // "play it anyway": fetch the audio and route through <audio>
     if (cur && embedBlocked && blockedMode === 'stream' && !cur._streamed) {
@@ -1758,6 +1874,7 @@
   el.tpPlay.onclick = () => {
     if (videoActive) return vctl('play');
     if (localActive) return LA.play().catch(() => {});
+    consumeResume(); // first Play on a restored queue → own it + start stats
     if (P.snapshot().ready) P.play();
   };
   el.tpPause.onclick = () => {
@@ -1862,6 +1979,7 @@
     el.setDlReset.disabled = !dlDir;
     el.setCacheKeep.checked = cacheKeep;
     el.setCacheCap.value = String(cacheCapMB);
+    el.setKeepQueue.checked = keepQueue;
     el.tuneBeat.value = tune.beatSens;
     el.tuneGroove.checked = !!tune.grooveFill;
     el.tuneEqH.value = tune.eqHeight;
@@ -1928,6 +2046,14 @@
     localStorage.setItem('retro.cacheCapMB', String(cacheCapMB));
     pushCachePolicy();
     setTimeout(refreshCacheSize, 300);
+  });
+  el.setKeepQueue.addEventListener('change', () => {
+    keepQueue = el.setKeepQueue.checked;
+    localStorage.setItem('retro.keepQueue', keepQueue ? '1' : '0');
+    if (keepQueue) saveSession(true); // snapshot the current queue right away
+    else {
+      try { localStorage.removeItem(LS_SESSION); } catch (_) {}
+    }
   });
   el.setCacheClear.onclick = () => {
     if (!(window.retro && window.retro.clearCache))
@@ -2280,7 +2406,10 @@
 
   LA.addEventListener('timeupdate', () => {
     if (!localActive) return;
-    if (!LA.paused) statTick();
+    if (!LA.paused) {
+      statTick();
+      maybeSaveSessionPos();
+    }
     paintTime(LA.currentTime || 0, LA.duration || 0);
   });
   LA.addEventListener('play', () => {
@@ -3121,7 +3250,10 @@
         e.preventDefault();
         if (videoActive) vctl('toggle');
         else if (localActive) LA.paused ? LA.play().catch(() => {}) : LA.pause();
-        else P.togglePlay();
+        else {
+          consumeResume(); // first Space on a restored queue → own it + stats
+          P.togglePlay();
+        }
         break;
       case 'ArrowRight':
         if (videoActive) vctl('seek:5');
@@ -3340,7 +3472,9 @@
   console.info('[retro] renderer build: radio-v3 / video-transport-routing');
   loadLists();
   renderListUI();
-  renderQueue();
+  // ⚙ "Restore queue on startup" — rebuild a saved queue (paused); it renders
+  // the queue itself, so only paint an empty one when there's nothing to restore
+  if (!restoreSession()) renderQueue();
   renderArtistMix();
   recsMsg('loading…');
 
@@ -3363,7 +3497,8 @@
         recsMsg('connect to see recommendations');
       }
     } catch (e) {
-      if (!bootMsgShown) {
+      if (!bootMsgShown && !sessionRestored) {
+        // don't stomp a just-restored queue's marquee while the sidecar warms up
         setNowPlaying({ artists: '', title: 'starting local server…' });
         bootMsgShown = true;
       }

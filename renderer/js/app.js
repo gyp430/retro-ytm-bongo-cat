@@ -30,6 +30,7 @@
     setKeepQueue: $('set-keep-queue'),
     setCombineTransport: $('set-combine-transport'),
     setTimeMode: $('set-time-mode'),
+    setMarqueeStatic: $('set-marquee-static'),
     setCat: $('set-cat'),
     tuneBeat: $('tune-beat'),
     tuneGroove: $('tune-groove'),
@@ -137,6 +138,8 @@
       const m = localStorage.getItem('retro.timeMode');
       return m === 'remaining' || m === 'both' ? m : 'elapsed';
     })(),
+    // marquee: scroll prev·NOW·next (false) or a static NOW-only bar (true)
+    marqueeStatic: localStorage.getItem('retro.marqueeStatic') === '1',
     authed: false,
     lists: [], // session lists: [{ id, name, tracks: [] }]
     activeListId: null,
@@ -297,7 +300,10 @@
   // live queue track. For anything else (CRT video, boot message, nothing
   // playing) it falls back to the single-label form. Shuffle makes the
   // neighbours unpredictable, so it collapses to NOW-only with a ⤨ marker.
+  let lastNowTrack = null; // so a settings toggle can repaint the marquee
   function setNowPlaying(t) {
+    lastNowTrack = t;
+    el.marquee.classList.toggle('static', !!state.marqueeStatic);
     const seg = (tr) =>
       escapeHtml(`${tr.artists ? tr.artists + ' — ' : ''}${tr.title || '?'}`);
     const q = state.queue;
@@ -311,7 +317,8 @@
     let html;
     if (!t) {
       html = `<span class="mq-now">◄►&nbsp;&nbsp;YouTube Music</span>`;
-    } else if (onQueue && !state.shuffle && q.length > 1) {
+    } else if (onQueue && !state.marqueeStatic && !state.shuffle && q.length > 1) {
+      // static mode → NOW only (prev/next belong to the scrolling bar)
       const sep = `<span class="mq-sep">•</span>`;
       const bits = [];
       if (q[qi - 1]) bits.push(`<span class="mq-side">◄ ${seg(q[qi - 1])}</span>`);
@@ -322,9 +329,10 @@
       const tag = onQueue && state.shuffle ? '⤨&nbsp;&nbsp;' : '◄►&nbsp;&nbsp;';
       html = `<span class="mq-now">${tag}${seg(t)}</span>`;
     }
-    el.title.innerHTML = html + '&nbsp;&nbsp;&nbsp;&nbsp;';
+    el.title.innerHTML = html + (state.marqueeStatic ? '' : '&nbsp;&nbsp;&nbsp;&nbsp;');
     el.title.classList.remove('scroll');
     el.title.style.animationDuration = '';
+    if (state.marqueeStatic) return; // no scroll, CSS centres + ellipsises it
     // let layout settle, then decide if it needs to scroll
     requestAnimationFrame(() => {
       if (el.title.scrollWidth > el.marquee.clientWidth + 4) {
@@ -335,6 +343,7 @@
       }
     });
   }
+  el.marquee.classList.toggle('static', state.marqueeStatic); // pre-paint state
 
   // makes any track-pane <li> draggable onto the queue — shared by song rows
   // and video rows so they behave identically
@@ -2063,6 +2072,7 @@
     el.setKeepQueue.checked = keepQueue;
     el.setCombineTransport.checked = combineTransport;
     el.setTimeMode.value = state.timeMode;
+    el.setMarqueeStatic.checked = state.marqueeStatic;
     el.tuneBeat.value = tune.beatSens;
     el.tuneGroove.checked = !!tune.grooveFill;
     el.tuneEqH.value = tune.eqHeight;
@@ -2144,6 +2154,11 @@
     applyCombineTransport();
   });
   el.setTimeMode.addEventListener('change', () => setTimeMode(el.setTimeMode.value));
+  el.setMarqueeStatic.addEventListener('change', () => {
+    state.marqueeStatic = el.setMarqueeStatic.checked;
+    localStorage.setItem('retro.marqueeStatic', state.marqueeStatic ? '1' : '0');
+    setNowPlaying(lastNowTrack); // repaint the bar now
+  });
   el.setCacheClear.onclick = () => {
     if (!(window.retro && window.retro.clearCache))
       return toast('needs the app (npm start)');
@@ -2217,6 +2232,7 @@
     localStorage.setItem('retro.cat', catOn ? '1' : '0');
     el.cat.classList.toggle('hidden', !catOn);
     catRefresh();
+    resizeVis(); // the readout column just changed height → refit the canvas
   });
 
   // ---- bongo cat: randomised paw taps + RGB key-cap flashes ----------

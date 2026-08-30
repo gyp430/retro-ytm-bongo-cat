@@ -95,6 +95,10 @@ button{font:inherit;color:var(--text);cursor:pointer;}
 #vis{
   grid-area:vis;align-self:stretch;justify-self:stretch;
   width:100%;height:100%;
+  /* keep the panel a sensible height when the bongo cat is hidden — otherwise
+     the readout column (just the clock + kbps line) collapses the whole row
+     and the visualiser becomes a thin strip */
+  min-height:92px;
   /* smooth (was image-rendering:pixelated) — the bars now have glow + peak
      caps and are drawn DPR-scaled, so crisp/smooth reads better than crunchy */
 }
@@ -146,6 +150,12 @@ button{font:inherit;color:var(--text);cursor:pointer;}
 }
 #track-title.scroll{animation:marq 14s linear infinite;}
 @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-100%);}}
+/* ⚙ "Static now-playing bar" — no scroll: centre it, ellipsis if it overflows */
+.marquee.static{text-align:center;}
+.marquee.static #track-title{
+  display:block;padding-left:0;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;animation:none;
+}
 /* prev · NOW · next segments inside the marquee */
 #track-title .mq-now{color:var(--lcd);}
 #track-title .mq-side{color:var(--lcd-dim);text-shadow:none;}

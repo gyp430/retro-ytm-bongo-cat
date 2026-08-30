@@ -291,7 +291,7 @@ function createWindow() {
     minHeight: 340,
     frame: false,
     resizable: true,
-    maximizable: false,
+    maximizable: true, // double-click the titlebar toggles it (see win:toggle-max)
     fullscreenable: false,
     backgroundColor: '#000000',
     title: 'Retro YTM Bongo Cat',
@@ -462,6 +462,11 @@ async function loadUI() {
 // --------------------------------------------------------------------------- //
 ipcMain.handle('win:min', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize());
 ipcMain.handle('win:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close());
+ipcMain.handle('win:toggle-max', (e) => {
+  const w = BrowserWindow.fromWebContents(e.sender);
+  if (!w || !w.isMaximizable()) return;
+  w.isMaximized() ? w.unmaximize() : w.maximize();
+});
 
 // video window: open/focus it, and relay its playback state to the main window
 ipcMain.handle('video:open', () => openVideoWindow());

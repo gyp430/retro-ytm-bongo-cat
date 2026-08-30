@@ -275,6 +275,7 @@ visualiser is faked (reacts to play/pause, not real FFT).
 | **ARTIST MIX panel** | **done 2026-08-28** — §5h. `#aq-section` in the queue column: a pool of artists (add by search via new `GET /search-artists`, or drag from FOR YOU) that shuffles random songs from random pooled artists into the queue when armed. Mutually exclusive with radio. **Needs `npm start`** (server route) + an in-app check. |
 | **Offline mode** (skip first-run Google sign-in) | **done 2026-08-30** — §2. `#auth-skip` hides the gate + persists `retro.offline`; `◍` reopens it. **Verified** (served page, forced overlay → skip). |
 | **"Restore queue on startup"** (queue + track + position survive a restart) | **done 2026-08-30** — §5i. `⚙` → *Queue* checkbox (`retro.keepQueue`, default off) → `retro.session`. `player.js` `cue()`. **Verified** via a served sidecar + seeded session: restore order/`qi`/`pos`, marquee, toggle-off clear, re-save on queue edit. Live position-write-while-playing not exercised (sandbox can't drive the YT iframe). |
+| **QoL: combine play/pause button · dbl-click titlebar to maximise** | **done 2026-08-30** — §5j. `⚙` → *Playback* → "Combine play / pause into one button" (`retro.combineTransport`); `#titlebar` dbl-click → `win:toggle-max` (`maximizable:true`). Combine-button **verified** on a served page incl. real playback toggle; maximise needs Electron. |
 | Game-skin visual QA | **outstanding** — the 6 game skins were verified structurally, **never eyeballed in the running Electron app**. Do a pass on `npm start`. |
 | Package → portable .exe | **done 2026-08-28** — §9. `retro-sidecar.spec` (PyInstaller onedir: `server.py` + bundled `renderer/` + `ytmusicapi` + `yt_dlp`) → `package.json → build` (electron-builder `portable`) → **`release/RetroYTM-BongoCat-1.0.0-portable.exe`** (~91 MB). Frozen sidecar smoke-tested (health / UI / all routes / yt-dlp all OK). GUI launch of the packaged exe not yet done by a human. No ffmpeg bundled (downloads stay `.m4a`); unsigned. **Bongo-cat app icon added 2026-08-28** (`build/make-icon.py` → `build/icon.ico` + `renderer/icon.png`, wired via `build.win.icon` + `BrowserWindow({icon})`). See **QA.md**. |
 
@@ -543,6 +544,12 @@ saved file in the OS file manager); `window.retro.pickFolder()` → IPC
 `dialog:folder` → `dialog.showOpenDialog({properties:['openDirectory',
 'createDirectory']})` → abs path or null (settings download-folder chooser).
 
+Added 2026-08-30: `window.retro.toggleMaximize()` → IPC `win:toggle-max` →
+`w.isMaximized() ? w.unmaximize() : w.maximize()` (guarded by `isMaximizable()`).
+The main window is now `maximizable:true`; `app.js` wires a `dblclick` on
+`#titlebar` (ignoring `.title-btns`) to it — frameless titlebars don't
+maximise on their own. Video / stats windows unchanged.
+
 ### localStorage keys (all of them)
 
 `retro.theme` · `retro.themeVars` (resolved token map, no-flash script) ·
@@ -569,7 +576,8 @@ YT err 101/150) · `retro.dlDir` (download folder abs path; absent =
 **`retro.artistMixOn`** (`'1'`/`'0'` — mix armed) ·
 **`retro.keepQueue`** (`'1'`/`'0'` — "Restore queue on startup", default off, §5i) ·
 **`retro.session`** (JSON `{v,queue,qi,pos,ts}` — the saved queue; written only
-when `retro.keepQueue`, §5i).
+when `retro.keepQueue`, §5i) ·
+**`retro.combineTransport`** (`'1'`/`'0'` — one play/pause button, default off, §5j).
 Imported local files are **not** persisted (object URLs die on reload) and are
 dropped from `retro.session`; the rest of the queue now **is** persisted when
 `retro.keepQueue` is on. The
@@ -1151,6 +1159,26 @@ All in `app.js`.
   swallows errors for the not-yet-started restored track (flag `isAvailable`
   false, no auto-advance / stream). `boot()`'s "starting local server…" marquee
   is suppressed while `sessionRestored`.
+
+---
+
+## 5j QoL toggles (2026-08-30)
+
+Both in `app.js`, `⚙` settings.
+
+- **Combine play / pause into one button** (`#set-combine-transport`,
+  `retro.combineTransport`, default off). `applyCombineTransport()` hides
+  `#tp-pause` and turns `#tp-play` into a toggle: `isPlayingNow()` (aggregates
+  `videoPlaying` / `localPlaying` / `LA` / `P.snapshot().playing`) drives the
+  glyph (`►` ↔ `❚❚`) + title, refreshed by a 300 ms `setInterval` while on and
+  on every click. The click routes to `doPause()` when combined-and-playing,
+  else `doPlay()`. `#tp-pause`'s own handler (`doPause`) is unchanged for the
+  two-button layout. **Verified** in a served page: hide/show, persistence,
+  glyph swap on real playback, click-to-pause / click-to-resume, toggle-off
+  mid-play restores both buttons.
+- **Double-click titlebar → maximise / restore** — see "IPC / preload surface"
+  (`window.retro.toggleMaximize` / `win:toggle-max`; `#titlebar` `dblclick` in
+  `app.js`, `maximizable:true`). Not exercised outside Electron.
 
 ---
 

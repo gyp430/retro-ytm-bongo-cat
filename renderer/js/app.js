@@ -28,6 +28,7 @@
     setCacheSize: $('set-cache-size'),
     setCacheClear: $('set-cache-clear'),
     setKeepQueue: $('set-keep-queue'),
+    setCombineTransport: $('set-combine-transport'),
     setCat: $('set-cat'),
     tuneBeat: $('tune-beat'),
     tuneGroove: $('tune-groove'),
@@ -46,6 +47,7 @@
     plAdd: $('pl-add'),
     min: $('btn-min'),
     close: $('btn-close'),
+    titlebar: $('titlebar'),
     vis: $('vis'),
     lcd: $('lcd-time'),
     kbps: $('kbps'),
@@ -159,6 +161,7 @@
   let cacheCapMB = +localStorage.getItem('retro.cacheCapMB') || 500;
   let keepQueue = localStorage.getItem('retro.keepQueue') === '1'; // restore queue on startup
   const LS_SESSION = 'retro.session';
+  let combineTransport = localStorage.getItem('retro.combineTransport') === '1'; // one play/pause button
   const LA = el.localAudio;
 
   // ---- helpers --------------------------------------------------------
@@ -1871,17 +1874,52 @@
   // ---- transport wiring --------------------------------------
   // while a CRT video is the active source the transport drives *it*
   const vctl = (cmd) => window.retro && window.retro.videoControl(cmd);
-  el.tpPlay.onclick = () => {
+  // is something actually rolling right now, whichever source owns playback?
+  const isPlayingNow = () => {
+    if (videoActive) return videoPlaying;
+    if (localActive) return !!localPlaying || (LA && !LA.paused && !LA.ended);
+    return P.snapshot().playing;
+  };
+  const doPlay = () => {
     if (videoActive) return vctl('play');
     if (localActive) return LA.play().catch(() => {});
     consumeResume(); // first Play on a restored queue → own it + start stats
     if (P.snapshot().ready) P.play();
   };
-  el.tpPause.onclick = () => {
+  const doPause = () => {
     if (videoActive) return vctl('pause');
     if (localActive) return LA.pause();
     P.pause();
   };
+  el.tpPlay.onclick = () => {
+    // ⚙ "Combine play/pause": the play button doubles as pause while rolling
+    if (combineTransport && isPlayingNow()) doPause();
+    else doPlay();
+    updatePlayPauseBtn();
+  };
+  el.tpPause.onclick = doPause;
+
+  // ---- ⚙ "Combine play/pause into one button" -------------------------
+  let ppTimer = 0;
+  function updatePlayPauseBtn() {
+    if (!combineTransport) return;
+    const playing = isPlayingNow();
+    const glyph = playing ? '❚❚' : '►';
+    if (el.tpPlay.textContent !== glyph) el.tpPlay.textContent = glyph;
+    el.tpPlay.title = playing ? 'Pause' : 'Play';
+  }
+  function applyCombineTransport() {
+    el.tpPause.style.display = combineTransport ? 'none' : '';
+    clearInterval(ppTimer);
+    if (combineTransport) {
+      updatePlayPauseBtn();
+      ppTimer = setInterval(updatePlayPauseBtn, 300); // cheap; mirrors the P poll
+    } else {
+      el.tpPlay.textContent = '►';
+      el.tpPlay.title = 'Play';
+    }
+  }
+  applyCombineTransport();
   el.tpStop.onclick = () => {
     statFlush();
     if (videoActive) {
@@ -1960,6 +1998,12 @@
   // ---- window buttons ---------------------------------------
   el.min.onclick = () => window.retro && window.retro.minimize();
   el.close.onclick = () => window.retro && window.retro.close();
+  // double-click the titlebar → maximise / restore (native frameless titlebars
+  // don't do this for themselves). Ignore double-clicks on the ◈▣◍⚙_× buttons.
+  el.titlebar.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.title-btns')) return;
+    window.retro && window.retro.toggleMaximize && window.retro.toggleMaximize();
+  });
   el.signin.onclick = () => connectGoogle();
   el.video.onclick = () => {
     if (window.retro && window.retro.openVideo) window.retro.openVideo();
@@ -1980,6 +2024,7 @@
     el.setCacheKeep.checked = cacheKeep;
     el.setCacheCap.value = String(cacheCapMB);
     el.setKeepQueue.checked = keepQueue;
+    el.setCombineTransport.checked = combineTransport;
     el.tuneBeat.value = tune.beatSens;
     el.tuneGroove.checked = !!tune.grooveFill;
     el.tuneEqH.value = tune.eqHeight;
@@ -2054,6 +2099,11 @@
     else {
       try { localStorage.removeItem(LS_SESSION); } catch (_) {}
     }
+  });
+  el.setCombineTransport.addEventListener('change', () => {
+    combineTransport = el.setCombineTransport.checked;
+    localStorage.setItem('retro.combineTransport', combineTransport ? '1' : '0');
+    applyCombineTransport();
   });
   el.setCacheClear.onclick = () => {
     if (!(window.retro && window.retro.clearCache))

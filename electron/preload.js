@@ -66,6 +66,7 @@ contextBridge.exposeInMainWorld('retro', {
   apiBase: `http://127.0.0.1:${process.env.RETRO_YTM_PORT || '8765'}`,
   minimize: () => ipcRenderer.invoke('win:min'),
   close: () => ipcRenderer.invoke('win:close'),
+  toggleMaximize: () => ipcRenderer.invoke('win:toggle-max'),
   connect: () => ipcRenderer.invoke('auth:interactive'),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   // settings menu: reset whole-window zoom to 100%

@@ -107,6 +107,8 @@ button{font:inherit;color:var(--text);cursor:pointer;}
   letter-spacing:2px;
 }
 .lcd.blink{animation:blink 1.5s steps(1) infinite;}
+/* "Both" time mode packs elapsed + remaining on one line — shrink to fit */
+.lcd--both{font-size:13px;letter-spacing:.5px;}
 @keyframes blink{50%{opacity:.28;}}
 .meta{font-size:9px;color:var(--lcd-dim);letter-spacing:.5px;}
 .meta span{color:var(--lcd);}

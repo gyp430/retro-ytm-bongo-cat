@@ -231,7 +231,7 @@ channel id (used by the stats window to map most-played back to an artist page).
 | `renderer/css/game-skins.css` | ~1342 | Per-theme element restyle (§5d). One `html[data-theme="<id>"]` block per game theme. **All 6** built; presets/Custom get nothing. `.display` has **no `overflow:hidden`** (would clip the `::after{inset:-4px}` corner rivets) — `.readout` clips itself instead (§5f.3). |
 | `renderer/js/api.js` | 95 | `window.RetroAPI` — fetch wrapper. Methods incl. `home`, `artists`, `artist(id)`, `suggestedArtists(seeds)`, `rate`, `addToPlaylist` / `removeFromPlaylist` / `movePlaylistItem` / `renamePlaylist` / `deletePlaylist` / `createPlaylist`. |
 | `renderer/js/player.js` | 105 | `window.RetroPlayer` — wraps the YT IFrame player. `snapshot()` → `{ready,cur,dur,playing,state}`. Polls 250 ms → `tick`. |
-| `renderer/js/app.js` | ~2793 | glue (a third of the codebase — GRAPH_REPORT flags it for a module split). `state = {list, queue, qi, shuffle, repeat, radio, showRemaining, authed, lists, activeListId, **plView**, originTracks}`; flags `videoActive/videoPlaying`, `localActive/localPlaying`. Everything from prior sessions **plus** this session: prev·now·next marquee (`setNowPlaying`), **stats** module (`statLoad/statStart/statTick/statFlush`, `topStatsArtists`, `retro.stats`, §5f.6) + `onStatsPlay` handler, **FOR YOU** (`loadRecs/loadArtists/renderForYou`, `openArtist/playArtist/getArtist`, §5f.2), **★ favourites** (`likedIds`, `rateTrack/toggleFav/updateFavBtn`, §5f.4), **playlist management** (`newYtPlaylist`, `dropTrackOnPlaylist`, `removeFromPl`, `reorderInPl`, `playlistMenu`, `renamePl`, `deletePl`, `makePlaylistRow`, `optimisticPls`/`suppressedPls`, §5f.5), **`#split-main`** resizer (`bindMainSplit`, §5f.3), **bongo→FFT** (`catBeat`, `catSetBeatMode`, `catTap`, `catRefresh`, §5f.7), **stream-cache** settings (`pushCachePolicy`, `refreshCacheSize`, §5f.8). |
+| `renderer/js/app.js` | ~2793 | glue (a third of the codebase — GRAPH_REPORT flags it for a module split). `state = {list, queue, qi, shuffle, repeat, radio, timeMode, authed, lists, activeListId, **plView**, originTracks}`; flags `videoActive/videoPlaying`, `localActive/localPlaying`. Everything from prior sessions **plus** this session: prev·now·next marquee (`setNowPlaying`), **stats** module (`statLoad/statStart/statTick/statFlush`, `topStatsArtists`, `retro.stats`, §5f.6) + `onStatsPlay` handler, **FOR YOU** (`loadRecs/loadArtists/renderForYou`, `openArtist/playArtist/getArtist`, §5f.2), **★ favourites** (`likedIds`, `rateTrack/toggleFav/updateFavBtn`, §5f.4), **playlist management** (`newYtPlaylist`, `dropTrackOnPlaylist`, `removeFromPl`, `reorderInPl`, `playlistMenu`, `renamePl`, `deletePl`, `makePlaylistRow`, `optimisticPls`/`suppressedPls`, §5f.5), **`#split-main`** resizer (`bindMainSplit`, §5f.3), **bongo→FFT** (`catBeat`, `catSetBeatMode`, `catTap`, `catRefresh`, §5f.7), **stream-cache** settings (`pushCachePolicy`, `refreshCacheSize`, §5f.8). |
 | `renderer/js/stats.js` | 278 | **new.** The stats window. Reads `localStorage['retro.stats']`, aggregates (`topTracks`, `topArtists`, `mostSkipped`, `dailySeries`), draws the plays/day canvas chart, wires `▶` → `window.retro.playFromStats`. Re-renders on `storage`. No sidecar calls. §5f.6. |
 | `renderer/css/stats.css` | 89 | **new.** The stats window skin — Classic-Green fallbacks + shared theme tokens. |
 | `renderer/stats.html` | 69 | **new.** Own CSP, loads `js/stats.js` only. §5f.6. |
@@ -586,7 +586,9 @@ YT err 101/150) · `retro.dlDir` (download folder abs path; absent =
 **`retro.keepQueue`** (`'1'`/`'0'` — "Restore queue on startup", default off, §5i) ·
 **`retro.session`** (JSON `{v,queue,qi,pos,ts}` — the saved queue; written only
 when `retro.keepQueue`, §5i) ·
-**`retro.combineTransport`** (`'1'`/`'0'` — one play/pause button, default off, §5j).
+**`retro.combineTransport`** (`'1'`/`'0'` — one play/pause button, default off, §5j) ·
+**`retro.timeMode`** (`'elapsed'`/`'remaining'`/`'both'` — LCD time readout, default
+`elapsed`, §5j).
 Imported local files are **not** persisted (object URLs die on reload) and are
 dropped from `retro.session`; the rest of the queue now **is** persisted when
 `retro.keepQueue` is on. The
@@ -1199,10 +1201,15 @@ Both in `app.js`, `⚙` settings.
 - **Double-click titlebar → maximise / restore** — see "IPC / preload surface"
   (`window.retro.toggleMaximize` / `win:toggle-max`; `#titlebar` `dblclick` in
   `app.js`, `maximizable:true`). Not exercised outside Electron.
-
----
-
-## 6. Known limitations / gotchas
+- **LCD time readout — elapsed / remaining / both** (2026-08-30). Was a boolean
+  `state.showRemaining`; now `state.timeMode` ∈ `elapsed` / `remaining` / `both`,
+  persisted as `retro.timeMode`. Clicking `#lcd-time` cycles the three;
+  `⚙` → Playback → *Time readout* (`#set-time-mode`) is the same setting (kept in
+  sync). `paintTime()` renders `M:SS` / `-M:SS` / `M:SS / -M:SS`; **both** adds a
+  `.lcd--both` class (`winamp.css`) that drops the font to 13px so both times fit
+  the 160-px readout. `setTimeMode()` repaints immediately off `lastTime` so it
+  updates while paused. **Verified** on a served page (click cycle, dropdown,
+  persistence across reload, no overflow).
 
 - **Visualiser is real** for imported local files **and streamed
   (embed-blocked / stream-everything) tracks** — both go through the local

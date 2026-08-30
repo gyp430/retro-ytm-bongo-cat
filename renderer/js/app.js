@@ -29,6 +29,7 @@
     setCacheClear: $('set-cache-clear'),
     setKeepQueue: $('set-keep-queue'),
     setCombineTransport: $('set-combine-transport'),
+    setTimeMode: $('set-time-mode'),
     setCat: $('set-cat'),
     tuneBeat: $('tune-beat'),
     tuneGroove: $('tune-groove'),
@@ -130,7 +131,12 @@
     shuffle: false,
     repeat: 'off', // off | all | one
     radio: false,
-    showRemaining: false,
+    // LCD time readout: 'elapsed' | 'remaining' | 'both' (click the LCD to
+    // cycle, or ⚙ → Playback). Persisted as retro.timeMode.
+    timeMode: (() => {
+      const m = localStorage.getItem('retro.timeMode');
+      return m === 'remaining' || m === 'both' ? m : 'elapsed';
+    })(),
     authed: false,
     lists: [], // session lists: [{ id, name, tracks: [] }]
     activeListId: null,
@@ -1482,9 +1488,17 @@
 
   // paints the LCD + seek bar from a (current, duration) pair — shared by the
   // music player tick and the CRT video's time reports
+  let lastTime = { cur: 0, dur: 0 }; // so a mode change can repaint while paused
   function paintTime(cur, dur) {
-    const shown = state.showRemaining && dur ? -(dur - cur) : cur;
-    el.lcd.textContent = (shown < 0 ? '-' : '') + mmss(Math.abs(shown));
+    lastTime = { cur, dur };
+    const rem = Math.max(0, (dur || 0) - cur);
+    const both = state.timeMode === 'both' && dur;
+    el.lcd.textContent = both
+      ? mmss(cur) + ' / -' + mmss(rem)
+      : state.timeMode === 'remaining' && dur
+      ? '-' + mmss(rem)
+      : mmss(cur);
+    el.lcd.classList.toggle('lcd--both', !!both); // smaller font so both fit
     const f = dur ? cur / dur : 0;
     el.posFill.style.width = f * 100 + '%';
     el.posThumb.style.left = f * 100 + '%';
@@ -1987,7 +2001,16 @@
       maybeExtendRadio();
     }
   };
-  el.lcd.onclick = () => (state.showRemaining = !state.showRemaining);
+  // click the LCD to cycle elapsed → remaining → both
+  const TIME_MODES = ['elapsed', 'remaining', 'both'];
+  function setTimeMode(m) {
+    state.timeMode = TIME_MODES.includes(m) ? m : 'elapsed';
+    localStorage.setItem('retro.timeMode', state.timeMode);
+    if (el.setTimeMode) el.setTimeMode.value = state.timeMode;
+    paintTime(lastTime.cur, lastTime.dur); // repaint now (also covers paused)
+  }
+  el.lcd.onclick = () =>
+    setTimeMode(TIME_MODES[(TIME_MODES.indexOf(state.timeMode) + 1) % 3]);
 
   // ---- download current track (yt-dlp, on demand) ----------------------
   el.tpDl.onclick = async () => {
@@ -2039,6 +2062,7 @@
     el.setCacheCap.value = String(cacheCapMB);
     el.setKeepQueue.checked = keepQueue;
     el.setCombineTransport.checked = combineTransport;
+    el.setTimeMode.value = state.timeMode;
     el.tuneBeat.value = tune.beatSens;
     el.tuneGroove.checked = !!tune.grooveFill;
     el.tuneEqH.value = tune.eqHeight;
@@ -2119,6 +2143,7 @@
     localStorage.setItem('retro.combineTransport', combineTransport ? '1' : '0');
     applyCombineTransport();
   });
+  el.setTimeMode.addEventListener('change', () => setTimeMode(el.setTimeMode.value));
   el.setCacheClear.onclick = () => {
     if (!(window.retro && window.retro.clearCache))
       return toast('needs the app (npm start)');
@@ -3356,7 +3381,7 @@
       ['Ctrl + ←', 'Previous track (or restart)'],
       ['→ / ←', 'Seek + / − 5 s'],
       ['↑ / ↓', 'Volume + / − 5'],
-      ['click LCD', 'Toggle elapsed / remaining'],
+      ['click LCD', 'Cycle elapsed / remaining / both'],
     ]],
     ['Window', [
       ['Ctrl + wheel', 'Zoom the whole window'],

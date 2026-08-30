@@ -511,6 +511,18 @@ button{font:inherit;color:var(--text);cursor:pointer;}
   box-shadow:0 8px 22px rgba(0,0,0,.55);
 }
 .theme-pop.hidden{display:none;}
+/* shared "×" close button for every flyout + the auth overlay (top-right) */
+.pop-close{
+  position:absolute;top:4px;right:4px;z-index:3;
+  width:18px;height:18px;padding:0;font:13px/16px "Consolas",monospace;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  background:linear-gradient(var(--btn-a),var(--btn-b));color:var(--text-dim);
+  border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
+  border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
+}
+.pop-close:hover{color:var(--text-strong);}
+.pop-close:active{background:linear-gradient(var(--btn-b),var(--btn-a));}
+.theme-pop{padding-top:22px;} /* room for the × over the first heading */
 .theme-pop h3{
   font-size:8px;letter-spacing:1.5px;color:var(--lcd-dim);
   margin:9px 4px 3px;text-transform:uppercase;
@@ -615,6 +627,7 @@ button{font:inherit;color:var(--text);cursor:pointer;}
 }
 .overlay.hidden{display:none;}
 .auth-card{
+  position:relative; /* anchor the .pop-close × */
   width:460px;max-width:92vw;background:var(--window-c);padding:16px 18px;
   border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
   border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);

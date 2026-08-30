@@ -148,13 +148,23 @@ expired). Header-paste is a fallback under "Advanced".
 
 **Offline mode (2026-08-28):** the first-run overlay is no longer a hard gate.
 A **"Skip — use as an offline player (local files only)"** button (`#auth-skip`
-in `.auth-card`) hides the overlay and sets `localStorage['retro.offline']='1'`
+in `.auth-card`) **and a top-right `×`** (`.pop-close`, 2026-08-30) both call
+`goOffline()` — hide the overlay and set `localStorage['retro.offline']='1'`
 so later launches don't re-prompt (`boot()` checks `offlineChosen()`; the flag is
 cleared the instant `onConnected()` fires). In offline mode search / playlists /
 radio / FOR YOU stay disabled (their existing `!state.authed` guards) but
 local-file import + playback + the real-FFT visualiser all work. The **◍**
 button always re-opens the sign-in overlay. `goOffline()` / `onConnected()` in
 `app.js`.
+
+**Flyout `×` close buttons (2026-08-30):** a shared `.pop-close` `×` (top-right,
+styled in `winamp.css`) on `#theme-pop`, `#settings-pop`, `#keys-pop` and the
+`#auth` `.auth-card`. Static in `index.html` for `#settings-pop` + `#auth`;
+prepended into the `innerHTML` of the JS-built `#theme-pop` (`themes.js`) and
+`#keys-pop` (`renderKeybinds`). One delegated `document` click handler in
+`app.js`: `keys-pop` → `closeKeysPop()` (also unlights the foot button),
+`auth` → `goOffline()`, everything else → `.hidden`. Outside-click + Esc still
+work as before.
 
 Auth state as of writing: the user has completed sign-in; `py/browser.json`
 exists and `/health` returns `authed:true`.

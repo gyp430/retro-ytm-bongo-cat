@@ -2211,6 +2211,18 @@
     )
       el.settingsPop.classList.add('hidden');
   });
+  // one "×" close button for every flyout / overlay (.pop-close, top-right).
+  // The auth overlay's × means "use offline" so it doesn't nag next launch.
+  document.addEventListener('click', (e) => {
+    const x = e.target.closest('.pop-close');
+    if (!x) return;
+    e.stopPropagation();
+    const pop = x.closest('.theme-pop, .overlay');
+    if (!pop) return;
+    if (pop.id === 'keys-pop') return closeKeysPop();
+    if (pop.id === 'auth') return goOffline();
+    pop.classList.add('hidden'); // theme-pop, settings-pop
+  });
   el.setVol.addEventListener('input', () => {
     const v = +el.setVol.value;
     saveVol(v);
@@ -3442,6 +3454,7 @@
     if (el.keysPop.dataset.built) return;
     el.keysPop.dataset.built = '1';
     el.keysPop.innerHTML =
+      `<button class="pop-close" type="button" title="Close">&times;</button>` +
       KEYBINDS.map(
         ([title, rows]) =>
           `<h3>${title}</h3><table>` +

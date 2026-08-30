@@ -192,6 +192,7 @@ window.RetroThemes = (() => {
         )
         .join('');
     pop.innerHTML =
+      `<button class="pop-close" type="button" title="Close">&times;</button>` +
       `<h3>Presets</h3>${rows(PRESETS)}` +
       `<h3>Game Themes</h3>${rows(GAMES)}` +
       `<h3>Custom</h3>` +

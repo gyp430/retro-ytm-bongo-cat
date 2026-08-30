@@ -571,7 +571,9 @@ hidden flags + `sidebarW`/`queueW`/**`displayH`** — `sidebar` key = the PLAYLI
 section, `recs` = FOR YOU, `artists` = ARTIST MIX (§5h), `displayH` = the
 `#split-main` player height, §5f.3) ·
 `retro.visOn` (`'1'`/`'0'` — visualiser on/off) · `retro.visMode`
-(`'auto'`/`'sim'`) · `retro.blockedMode` (`'stream'`/`'skip'` — how to handle
+(`'auto'`/`'sim'`) · **`retro.visColors`** (`'theme'`/`'spectrum'`/`'rainbow'` —
+visualiser bar palette, default `theme`, §5c "Visualiser") · `retro.blockedMode`
+(`'stream'`/`'skip'` — how to handle
 YT err 101/150) · `retro.dlDir` (download folder abs path; absent =
 `~/Downloads/Retro YTM`) · `retro.cat` (`'1'`/`'0'` — bongo cat on/off) ·
 **`retro.stats`** (listening stats — see §5f.6 for the shape) ·
@@ -1259,6 +1261,17 @@ Both in `app.js`, `⚙` settings.
   diagonal slope. Colours via `parseRGB()` → `visHot`/`visTopRGB`, recomputed in
   `readVisColors()`. Perf: per-bar gradient + shadow each frame on a tiny
   canvas — fine in Electron; cache the gradients if it ever chugs.
+- **Visualiser bar palette — `retro.visColors` (2026-08-30):** `⚙` → Visualizer →
+  *Colours* select (`#set-vis-colors`), read live by `drawVis`:
+  - `theme` (default) — the `--vis-bottom → --vis-top → visHot` gradient above.
+  - `spectrum` — each bar gets its own hue, `hue(i) = (i/BARS)*300` (red → violet
+    across the width); bar gradient `hsl(h 95% 80%) → hsl(h 92% 58%) → hsl(h 82%
+    30%)`, glow + peak cap in that hue; baseline line goes white.
+  - `rainbow` — same, plus a `vt*12` (~13°/s) drift so the hues scroll while
+    audio plays.
+  Setting round-trip + persistence verified on a served page; the actual
+  rendering wasn't eyeballed (the agent browser pane can't lay the fixed-chrome
+  window out at a sane size) — needs an `npm start` look.
 - **`/download` is a stream-rip** — steps outside the project's "nothing is
   downloaded" principle, on the user's explicit request. Kept cookie-free so
   the Google account isn't exposed (worst case: an IP throttle). `yt-dlp`

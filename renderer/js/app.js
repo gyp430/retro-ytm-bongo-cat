@@ -31,6 +31,7 @@
     setCombineTransport: $('set-combine-transport'),
     setTimeMode: $('set-time-mode'),
     setMarqueeStatic: $('set-marquee-static'),
+    setVisColors: $('set-vis-colors'),
     setCat: $('set-cat'),
     tuneBeat: $('tune-beat'),
     tuneGroove: $('tune-groove'),
@@ -1709,6 +1710,9 @@
   // settings-menu controls (declared here so drawVis can read them safely)
   let visOn = localStorage.getItem('retro.visOn') !== '0';
   let visMode = localStorage.getItem('retro.visMode') || 'auto'; // auto | sim
+  // bar colours: 'theme' (--vis-top/-bottom gradient) | 'spectrum' (hue by bar
+  // position) | 'rainbow' (spectrum + a slow hue drift). Read live in drawVis.
+  let visColors = localStorage.getItem('retro.visColors') || 'theme';
   // how to handle YT err 101/150: 'stream' (fetch audio, play locally) | 'skip'
   let blockedMode = localStorage.getItem('retro.blockedMode') || 'stream';
   // opt-in "stream everything": route EVERY real YT track through /stream + the
@@ -1860,10 +1864,17 @@
     const maxH = H * (tune.eqHeight / 100); // tallest a (centre) bar can get
     const floorY = H - botPad; // the (perfectly horizontal) baseline
 
+    // colour mode: 'theme' uses the palette; 'spectrum'/'rainbow' give each bar
+    // its own hue (rainbow also drifts it over time)
+    const multi = visColors === 'spectrum' || visColors === 'rainbow';
+    const hueDrift = visColors === 'rainbow' ? vt * 12 : 0; // ~13°/s
+    const hueAt = (i) => (((i / BARS) * 300 + hueDrift) % 360 + 360) % 360;
+    const baseRGB = multi ? '255,255,255' : visTopRGB;
+
     // faint glowing baseline (the "floor light" in classic EQ art)
-    vctx.shadowColor = `rgba(${visTopRGB},0.85)`;
+    vctx.shadowColor = `rgba(${baseRGB},0.85)`;
     vctx.shadowBlur = 6 * glow;
-    vctx.strokeStyle = `rgba(${visTopRGB},0.35)`;
+    vctx.strokeStyle = `rgba(${baseRGB},0.35)`;
     vctx.lineWidth = 1;
     vctx.beginPath();
     vctx.moveTo(0, floorY);
@@ -1881,11 +1892,22 @@
       const y = floorY - bh;
 
       const g = vctx.createLinearGradient(0, y, 0, floorY);
-      g.addColorStop(0, visHot); // hot core at the tip
-      g.addColorStop(0.35, visTop);
-      g.addColorStop(1, visBot); // dim at the base
+      let hotCol;
+      if (multi) {
+        const h = hueAt(i);
+        hotCol = `hsl(${h} 95% 80%)`;
+        g.addColorStop(0, hotCol); // hot tip
+        g.addColorStop(0.35, `hsl(${h} 92% 58%)`);
+        g.addColorStop(1, `hsl(${h} 82% 30%)`); // dim base
+        vctx.shadowColor = `hsla(${h} 90% 60% / 0.9)`;
+      } else {
+        hotCol = visHot;
+        g.addColorStop(0, visHot); // hot core at the tip
+        g.addColorStop(0.35, visTop);
+        g.addColorStop(1, visBot); // dim at the base
+        vctx.shadowColor = `rgba(${visTopRGB},0.9)`;
+      }
       vctx.fillStyle = g;
-      vctx.shadowColor = `rgba(${visTopRGB},0.9)`;
       vctx.shadowBlur = 7 * glow;
       if (vctx.roundRect) {
         vctx.beginPath();
@@ -1898,7 +1920,7 @@
       // the floating peak cap (toggleable)
       const py = floorY - Math.max(peaks[i] * maxH, 1) - 3;
       if (tune.eqCaps && peaks[i] > 0.04 && py < y - 1) {
-        vctx.fillStyle = visHot;
+        vctx.fillStyle = hotCol;
         vctx.shadowBlur = 8 * glow;
         vctx.fillRect(x, py, barW, 2);
       }
@@ -2063,6 +2085,7 @@
     el.setStreamAll.checked = streamAll;
     el.setVisOn.checked = visOn;
     el.setVisMode.value = visMode;
+    el.setVisColors.value = visColors;
     el.setCat.checked = catOn;
     el.setDlDir.textContent = dlDir || 'Downloads / Retro YTM  (default)';
     el.setDlDir.title = dlDir || '';
@@ -2224,6 +2247,10 @@
   el.setVisMode.addEventListener('change', () => {
     visMode = el.setVisMode.value;
     localStorage.setItem('retro.visMode', visMode);
+  });
+  el.setVisColors.addEventListener('change', () => {
+    visColors = el.setVisColors.value; // drawVis reads it live each frame
+    localStorage.setItem('retro.visColors', visColors);
   });
   let catOn = localStorage.getItem('retro.cat') !== '0';
   el.cat.classList.toggle('hidden', !catOn);

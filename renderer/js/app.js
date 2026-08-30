@@ -153,7 +153,6 @@
   // which play through <audio id="local-audio"> instead of RetroPlayer.
   let localActive = false;
   let localPlaying = false;
-  let localSeq = 0;
   const localImports = []; // [{ id, name, url }] — settings list + cleanup
   const localTracks = []; // track objects for imported files (shown in the pane)
   let dlDir = localStorage.getItem('retro.dlDir') || ''; // '' = default (~/Downloads/Retro YTM)
@@ -1059,9 +1058,18 @@
   const askConfirm = (msg) => openModal({ msg, withInput: false });
 
   // ---- playback control ----------------------------------------
-  function playAt(i) {
+  // tracks actually played, newest last — so "previous" means the song you were
+  // just listening to, not queue[qi-1] (which is wrong under shuffle, and was
+  // the "prev doesn't go back" bug).
+  const playHist = [];
+  function playAt(i, fromHist) {
     if (i < 0 || i >= state.queue.length) return;
     resumePending = false; // any explicit play supersedes a restored-but-unplayed queue
+    const outgoing = state.qi >= 0 ? state.queue[state.qi] : null;
+    if (!fromHist && outgoing && state.qi !== i) {
+      playHist.push(outgoing);
+      if (playHist.length > 200) playHist.shift();
+    }
     state.qi = i;
     const t = state.queue[i];
     if (!t || !t.videoId) return next();
@@ -1198,7 +1206,13 @@
       const s = P.snapshot();
       if (s.cur > 3) return P.seekFrac(0); // restart current, Winamp-style
     }
-    const i = nextIndex(-1);
+    // walk back through the real play history (survives shuffle); skip entries
+    // whose track has since left the queue
+    while (playHist.length) {
+      const j = state.queue.indexOf(playHist.pop());
+      if (j !== -1 && !isDead(state.queue[j])) return playAt(j, true);
+    }
+    const i = nextIndex(-1); // nothing in history → fall back to queue order
     if (i !== -1) playAt(i);
   }
 
@@ -2504,8 +2518,15 @@
         /\.(mp3|m4a|flac|ogg|oga|opus|wav|aac)$/i.test(f.name)
     );
     if (!ok.length) return toast('No audio files in that drop');
-    const added = ok.map((f) => {
-      const id = 'local:' + ++localSeq;
+    // stable per-file id (name + size) so listening stats for the same file
+    // merge across sessions instead of every import being a brand-new "unique"
+    // track. Re-importing a file already in this session is a no-op.
+    const fresh = ok.filter(
+      (f) => !localImports.some((l) => l.id === 'local:' + f.size + ':' + f.name)
+    );
+    if (!fresh.length) return toast('Already imported');
+    const added = fresh.map((f) => {
+      const id = 'local:' + f.size + ':' + f.name;
       const url = URL.createObjectURL(f);
       localImports.push({ id, name: f.name, url });
       return {

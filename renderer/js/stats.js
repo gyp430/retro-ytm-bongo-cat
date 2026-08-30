@@ -137,7 +137,7 @@
       ['Listening time', fmtDur(stats.totalMs)],
       ['This week', fmtDur(week)],
       ['Plays', String(totalPlays)],
-      ['Unique tracks', String(ids.filter((i) => !i.startsWith('local:')).length)],
+      ['Unique tracks', String(ids.length)], // incl. imported local files
       ['Skips', String(totalSkips)],
       ['Day streak', dayStreak(daily) + 'd'],
     ];

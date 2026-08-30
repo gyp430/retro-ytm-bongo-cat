@@ -315,6 +315,15 @@ Third column in `.pled-body` (`index.html` `#queue-panel`), all in `app.js`:
   dimmed. Per-row `×` remove, HTML5 drag to reorder (`moveInQueue` keeps
   `state.qi` pinned to the playing track). `clear` = keep only the playing
   track. Foot shows "N tracks · M up next · mm:ss left".
+- **prev / next history** (2026-08-30) — `playAt(i, fromHist)` pushes the
+  outgoing track onto a `playHist` stack (cap 200). `prev()` (after the
+  ">3 s → restart current" check, both the YT and local branch) pops that
+  stack, skipping tracks that have since left the queue, and only falls back
+  to `nextIndex(-1)` when history is empty. So **"previous" is the song you
+  were actually listening to**, not `queue[qi-1]` — which was wrong under
+  shuffle (prev jumped to a random track) and was the reported "prev doesn't
+  go back" bug. Works for imported/streamed local tracks too (history is
+  source-agnostic).
 - **Add to queue** — hover `＋` on any track-pane row (add to end), the
   right-click menu (`trackMenu`): Play now / Play next (insert at `qi+1`) /
   Add to queue / **Add to list ▸** (`state.lists` names + "＋ New list…") /
@@ -753,7 +762,11 @@ text.
   `files.length` — so the queue's internal DnD is untouched; `#drop-zone`
   overlay shows while dragging), or Settings → *Import audio files…*
   (`#file-input`). `importFiles()` → `URL.createObjectURL` per file → track
-  shape `{videoId:'local:N', isLocal:true, localUrl, artists:'Local file', …}`.
+  shape `{videoId:'local:<size>:<name>', isLocal:true, localUrl, artists:'Local
+  file', …}`. **The id is `size + name` (stable, 2026-08-30)** — not a session
+  counter — so listening stats for the same file merge across sessions instead
+  of counting a new "unique" track each import; re-importing a file already in
+  the session is a no-op ("Already imported" toast).
   They're pushed to `localTracks[]` and **rendered into the track pane**
   (`renderTracks(localTracks, 'local files (N)')`) so the drop has an obvious
   visible result, and appended to `state.queue` (auto-play if it was empty).
@@ -980,6 +993,13 @@ plays-per-day `<canvas>` bar chart (theme-gradient, click a bar to play that
 day), TOP TRACKS, TOP ARTISTS (aggregated across `"A, B"` strings), MOST
 SKIPPED (no play button). Opened from `⚙` settings → *Open statistics window*
 (`#set-stats`).
+
+**Imported local files** are tracked in `retro.stats` like any track (keyed by
+their `local:<size>:<name>` id). The **Unique tracks** tile counts them
+(2026-08-30 fix — it previously filtered `local:` out, so local plays never
+moved the counter). TOP TRACKS / TOP ARTISTS / MOST SKIPPED and play-from-stats
+still skip `local:` ids — the aggregates would clump every file under "Local
+file", and a gone object-URL can't be replayed from the stats window.
 
 **Play-from-stats:** each `▶` → `window.retro.playFromStats({tracks, shuffle,
 label})` → IPC `stats:play` → `main.js` brings the player window forward + sends

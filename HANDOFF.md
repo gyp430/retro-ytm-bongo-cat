@@ -19,9 +19,9 @@ Paste this file's path into a fresh chat to bring it up to speed:
   them into the queue. New endpoint `GET /search-artists`.
 - Title renamed to "Retro YTM Bongo Cat".
 - **Packaged → portable Windows .exe** (§9) —
-  `release/RetroYTM-BongoCat-1.0.0-portable.exe`, PyInstaller-frozen sidecar +
-  electron-builder. Sidecar verified; GUI launch is QA's first job. See
-  **QA.md**.
+  `release/RetroYTM-BongoCat-<version>-portable.exe` (currently **1.0.4**),
+  PyInstaller-frozen sidecar + electron-builder. Sidecar verified; GUI launch is
+  QA's first job. See **QA.md**.
 
 **Nothing below verified in a running Electron app yet** except what the user
 eyeballed via screenshots (visualiser look, cat). Needs an `npm start` pass.
@@ -1440,8 +1440,9 @@ Revert graphify entirely: `graphify uninstall --project` (`--purge` also drops
 
 ## 9. Packaging → portable Windows .exe  (2026-08-28)
 
-**Output:** `release/RetroYTM-BongoCat-1.0.0-portable.exe` (~91 MB, x64, single
-self-extracting exe — no Python/Node on the target). Full QA instructions:
+**Output:** `release/RetroYTM-BongoCat-<version>-portable.exe` (~91 MB, x64,
+single self-extracting exe — no Python/Node on the target). `package.json`
+`version` drives the filename; currently **1.0.4**. Full QA instructions:
 **`QA.md`**.
 
 ### Pieces

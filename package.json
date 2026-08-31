@@ -1,6 +1,6 @@
 {
   "name": "retro-ytm",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "private": true,
   "description": "Winamp-style desktop player for YouTube Music Premium (Electron + ytmusicapi + YouTube IFrame player)",
   "main": "electron/main.js",

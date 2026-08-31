@@ -61,3 +61,31 @@ startup" on, since `saveSession()` re-serialises the lot every 1.2 s).
 - `moveInQueue` / `insertInQueue` / `removeFromQueue` / `restoreSession` all
   touch `state.qi` — make sure the trim's `qi` adjustment composes with them.
 - HANDOFF §5b + the localStorage-keys list.
+
+---
+
+## Static now-playing bar should still show prev / next
+
+**Asked for:** 2026-08-31.
+
+The scrolling marquee shows `◄ <prev> • ◄► <now> • <next> ►`. When
+`⚙` → "Static now-playing bar" is on, `setNowPlaying()` (app.js §5f.1) currently
+forces the **NOW-only** branch, so prev/next disappear. The user wants prev/next
+visible in static mode too.
+
+**Want:** static mode keeps the three-part `prev • NOW • next` content, just
+without the scroll animation.
+
+**The catch:** three titles don't fit the ~160 px `#marquee` at once. Pick one:
+- Ellipsis the whole line (`text-overflow:ellipsis`, already on `.marquee.static
+  #track-title`) — but then only the start (prev + part of NOW) shows; the *next*
+  track never does. Weak.
+- Stack them: a small 2-line readout — line 1 `◄► <now>`, line 2 (dim, smaller)
+  `↑ <prev>   ↓ <next>` truncated. Needs a bit of vertical room (the marquee is
+  `height:16px` — would have to grow to ~26 px in static mode, and the
+  `.display` grid row `mq` is `auto` so that's fine).
+- Or drop `<prev>` in static mode and show `◄► <now>  ·  <next> ►` on one line
+  with ellipsis on `<now>` — keeps the "what's next" which is the useful half.
+
+**Where:** the `state.marqueeStatic` branch in `setNowPlaying()` +
+`.marquee.static` rules in `winamp.css` (§5f.1).

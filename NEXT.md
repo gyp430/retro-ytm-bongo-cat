@@ -2,6 +2,7 @@
 
 Paste this file's path into a fresh chat. Deep context: [`HANDOFF.md`](HANDOFF.md).
 QA checklist: [`QA.md`](QA.md). Dependency status: [`DEPS-AUDIT.md`](DEPS-AUDIT.md).
+Parked feature ideas: [`TODO.md`](TODO.md).
 
 Work from the repo root: <https://github.com/gyp430/retro-ytm-bongo-cat>
 (`gh` installed + authed as `gyp430`).

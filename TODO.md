@@ -28,3 +28,33 @@ Today there's a single always-on artist pool (`state.artistMix` →
 - `saveArtistMixPreset(name)` / `loadArtistMixPreset(name)` /
   `deleteArtistMixPreset(name)` next to `saveArtistMix()` in `app.js`.
 - HANDOFF §5h + the localStorage-keys list.
+
+---
+
+## Cap / auto-trim the queue
+
+**Asked for:** 2026-08-31.
+
+`state.queue` grows unbounded — radio (`extendRadioNow`, +~14 when ≤2 from the
+end) and artist mix (`extendArtistMix`, +~6–8 when ≤3 from the end) keep
+appending and nothing removes already-played tracks. `renderQueue()` rebuilds
+the whole `<ol>` with ~7 listeners per row on every track change / add / refill,
+so a few hundred entries → visible stutter (worse with "Restore queue on
+startup" on, since `saveSession()` re-serialises the lot every 1.2 s).
+
+**Want:**
+- Auto-trim played history: keep ~40 tracks behind `state.qi` + everything
+  upcoming, hard ceiling ~300; drop from the front and subtract the drop count
+  from `state.qi` (and from any queue-index bookkeeping).
+- Optional `⚙` setting `retro.queueCap` (Off / 100 / 250 / 500) for people who
+  want more history; default = the always-on ~40-behind trim.
+
+**Watch out:**
+- `prev()` walks `playHist` (track-object refs) via `state.queue.indexOf(...)`;
+  trimmed tracks → `indexOf === -1` → skipped. So "previous" would only reach
+  back as far as the trim keeps. Document it, or also cap `playHist` to match.
+- Do the trim in one place — e.g. end of `renderQueue()` or a `trimQueue()`
+  called after every `state.queue.push(...)` / `splice`.
+- `moveInQueue` / `insertInQueue` / `removeFromQueue` / `restoreSession` all
+  touch `state.qi` — make sure the trim's `qi` adjustment composes with them.
+- HANDOFF §5b + the localStorage-keys list.

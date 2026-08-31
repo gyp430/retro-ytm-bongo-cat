@@ -28,6 +28,7 @@
     setCacheSize: $('set-cache-size'),
     setCacheClear: $('set-cache-clear'),
     setKeepQueue: $('set-keep-queue'),
+    setQueueCap: $('set-queue-cap'),
     setCombineTransport: $('set-combine-transport'),
     setTimeMode: $('set-time-mode'),
     setMarqueeStatic: $('set-marquee-static'),
@@ -93,6 +94,7 @@
     aqList: $('aq-list'),
     aqFoot: $('aq-foot'),
     aqToggle: $('aq-toggle'),
+    aqPresets: $('aq-presets'),
     aqInput: $('aq-input'),
     aqAddBtn: $('aq-add-btn'),
     slSection: $('sl-section'),
@@ -170,6 +172,12 @@
   let cacheCapMB = +localStorage.getItem('retro.cacheCapMB') || 500;
   let keepQueue = localStorage.getItem('retro.keepQueue') === '1'; // restore queue on startup
   const LS_SESSION = 'retro.session';
+  // ⚙ "Cap the queue" — 0 = no limit; otherwise trim already-played tracks off
+  // the front once state.queue outgrows this (see trimQueue()). Default 250.
+  let queueCap = (() => {
+    const v = localStorage.getItem('retro.queueCap');
+    return v == null ? 250 : +v || 0;
+  })();
   let combineTransport = localStorage.getItem('retro.combineTransport') === '1'; // one play/pause button
   const LA = el.localAudio;
 
@@ -318,14 +326,26 @@
     let html;
     if (!t) {
       html = `<span class="mq-now">◄►&nbsp;&nbsp;YouTube Music</span>`;
-    } else if (onQueue && !state.marqueeStatic && !state.shuffle && q.length > 1) {
-      // static mode → NOW only (prev/next belong to the scrolling bar)
+    } else if (onQueue && !state.shuffle && q.length > 1) {
       const sep = `<span class="mq-sep">•</span>`;
-      const bits = [];
-      if (q[qi - 1]) bits.push(`<span class="mq-side">◄ ${seg(q[qi - 1])}</span>`);
-      bits.push(`<span class="mq-now">◄►&nbsp;&nbsp;${seg(t)}</span>`);
-      if (q[qi + 1]) bits.push(`<span class="mq-side">${seg(q[qi + 1])} ►</span>`);
-      html = bits.join(sep);
+      const pv = q[qi - 1];
+      const nx = q[qi + 1];
+      if (state.marqueeStatic) {
+        // static bar keeps prev/next too — a 2-line stack (NOW on top, dim
+        // prev · next beneath), no scroll. CSS grows .marquee to fit.
+        const nb = [];
+        if (pv) nb.push(`<span class="mq-side">◄ ${seg(pv)}</span>`);
+        if (nx) nb.push(`<span class="mq-side">${seg(nx)} ►</span>`);
+        html =
+          `<span class="mq-l1 mq-now">◄►&nbsp;&nbsp;${seg(t)}</span>` +
+          (nb.length ? `<span class="mq-l2">${nb.join(sep)}</span>` : '');
+      } else {
+        const bits = [];
+        if (pv) bits.push(`<span class="mq-side">◄ ${seg(pv)}</span>`);
+        bits.push(`<span class="mq-now">◄►&nbsp;&nbsp;${seg(t)}</span>`);
+        if (nx) bits.push(`<span class="mq-side">${seg(nx)} ►</span>`);
+        html = bits.join(sep);
+      }
     } else {
       const tag = onQueue && state.shuffle ? '⤨&nbsp;&nbsp;' : '◄►&nbsp;&nbsp;';
       html = `<span class="mq-now">${tag}${seg(t)}</span>`;
@@ -523,7 +543,22 @@
     return (t.artists ? t.artists + ' — ' : '') + (t.title || '?');
   }
 
+  // ⚙ "Cap the queue": once state.queue outgrows queueCap, drop already-played
+  // tracks off the front (never anything at or after state.qi) and slide qi +
+  // the playHist stack to match. Trimmed tracks fall out of "previous" reach —
+  // that's the documented trade-off (HANDOFF §5b).
+  function trimQueue() {
+    if (!queueCap || state.queue.length <= queueCap) return;
+    const drop = Math.min(state.queue.length - queueCap, Math.max(0, state.qi));
+    if (drop <= 0) return;
+    const removed = new Set(state.queue.splice(0, drop));
+    state.qi -= drop;
+    for (let i = playHist.length - 1; i >= 0; i--)
+      if (removed.has(playHist[i])) playHist.splice(i, 1);
+  }
+
   function renderQueue() {
+    trimQueue();
     el.queueList.innerHTML = '';
     state.queue.forEach((t, i) => {
       const li = document.createElement('li');
@@ -1111,6 +1146,7 @@
     maybeExtendRadio();
     maybeExtendArtistMix();
     prefetchNextIfBlocked();
+    kickVis(); // a new track is starting — make sure the visualiser loop is live
   }
 
   // imported-file playback: hand off from the YT player to <audio>
@@ -1368,6 +1404,79 @@
       localStorage.setItem(LS_AQ_ON, state.artistMixOn ? '1' : '0');
     } catch (_) {}
   };
+
+  // ---- named ARTIST MIX presets (⚙ ▾ next to "mix") --------------------
+  // state.artistMix stays the live working pool; presets are named copies in
+  // localStorage['retro.artistMixes'] = { "<name>": [{id,name}], … }.
+  const LS_AQ_PRESETS = 'retro.artistMixes';
+  const loadArtistMixes = () => {
+    try {
+      const o = JSON.parse(localStorage.getItem(LS_AQ_PRESETS));
+      return o && typeof o === 'object' ? o : {};
+    } catch (_) {
+      return {};
+    }
+  };
+  const saveArtistMixes = (o) => {
+    try {
+      localStorage.setItem(LS_AQ_PRESETS, JSON.stringify(o));
+    } catch (_) {}
+  };
+  function loadArtistMixPreset(name) {
+    const p = loadArtistMixes()[name];
+    if (!p) return;
+    state.artistMix = p.map((a) => ({ id: a.id, name: a.name }));
+    aqSeen.clear(); // fresh pool → let its tracks flow again
+    saveArtistMix();
+    renderArtistMix();
+    toast(`loaded “${name}” (${state.artistMix.length})`);
+    if (state.artistMixOn) extendArtistMix(true);
+  }
+  function artistMixPresetMenu(anchor) {
+    const mixes = loadArtistMixes();
+    const names = Object.keys(mixes).sort((a, b) => a.localeCompare(b));
+    const items = [
+      {
+        label: '＋ Save current as…',
+        fn: async () => {
+          if (!state.artistMix.length) return toast('the mix is empty — nothing to save');
+          const name = await askText('Save this artist mix as:', '');
+          if (!name) return;
+          const m = loadArtistMixes();
+          const existed = !!m[name];
+          m[name] = state.artistMix.map((a) => ({ id: a.id, name: a.name }));
+          saveArtistMixes(m);
+          toast(`${existed ? 'updated' : 'saved'} preset “${name}”`);
+        },
+      },
+    ];
+    if (names.length) {
+      items.push('-', { label: 'Load (replaces the pool)' });
+      names.forEach((n) =>
+        items.push({ label: `   ${n}  ·  ${mixes[n].length}`, fn: () => loadArtistMixPreset(n) })
+      );
+      items.push('-', { label: 'Delete' });
+      names.forEach((n) =>
+        items.push({
+          label: `   ✕ ${n}`,
+          fn: async () => {
+            if (!(await askConfirm(`Delete artist-mix preset “${n}”?`))) return;
+            const m = loadArtistMixes();
+            delete m[n];
+            saveArtistMixes(m);
+            toast(`deleted “${n}”`);
+          },
+        })
+      );
+    }
+    const r = anchor.getBoundingClientRect();
+    showCtx({ clientX: r.left, clientY: r.bottom }, items);
+  }
+  if (el.aqPresets)
+    el.aqPresets.addEventListener('click', (e) => {
+      e.stopPropagation(); // don't let the document-click handler close it instantly
+      artistMixPresetMenu(el.aqPresets);
+    });
 
   function renderArtistMix() {
     el.aqList.innerHTML = '';
@@ -1707,6 +1816,7 @@
   let vt = 0; // slow time accumulator
   let vframe = 0;
   let VW = 1, VH = 1, VDPR = 1; // CSS-px canvas size + device-pixel ratio
+  let visRAF = 0; // rAF handle — 0 while the draw loop is parked (idle CPU saver)
   // settings-menu controls (declared here so drawVis can read them safely)
   let visOn = localStorage.getItem('retro.visOn') !== '0';
   let visMode = localStorage.getItem('retro.visMode') || 'auto'; // auto | sim
@@ -1771,20 +1881,44 @@
       vgain = new Array(BARS).fill(0.3);
       vwin = buildCentreWindow(BARS);
     }
+    kickVis(true); // canvas just got resized/cleared — repaint once (re-parks if idle)
   }
   readVisColors();
   window.addEventListener('retro:themechange', readVisColors);
   if (window.ResizeObserver) new ResizeObserver(resizeVis).observe(el.vis);
   resizeVis();
 
+  // ---- visualiser frame loop --------------------------------------------
+  // 60fps of shadow-blurred canvas was the app's biggest idle-CPU cost. The
+  // loop now parks itself (visRAF = 0) whenever there's nothing to animate —
+  // visualiser off, window hidden, or playback stopped with the bars decayed —
+  // and kickVis() restarts it. A 500ms watchdog covers any play path that
+  // doesn't call kickVis() itself.
+  function visShouldRun() {
+    if (document.hidden || !visOn) return false;
+    if ((P && P.snapshot().playing) || videoPlaying || localPlaying) return true;
+    for (let i = 0; i < BARS; i++)
+      if (heights[i] > 0.004 || peaks[i] > 0.03) return true; // still settling
+    return false;
+  }
+  // kickVis()      — resume the loop only if there's motion to draw
+  // kickVis(true)  — also paint ONE frame when idle (resting baseline after a
+  //                  cold start / resize / visualiser-on), which then re-parks
+  function kickVis(force) {
+    if (visRAF) return;
+    if (force ? visOn && !document.hidden : visShouldRun())
+      visRAF = requestAnimationFrame(drawVis);
+  }
+
   function drawVis() {
+    visRAF = 0;
     const W = VW,
       H = VH;
     vctx.setTransform(VDPR, 0, 0, VDPR, 0, 0); // draw in CSS px, crisp on HiDPI
     vctx.clearRect(0, 0, W, H);
     if (!visOn) {
       catSetBeatMode(false);
-      return requestAnimationFrame(drawVis);
+      return; // parked — kickVis() restarts the loop when the visualiser returns
     }
 
     // real spectrum for imported files (same-origin → analyser can see it);
@@ -1926,9 +2060,11 @@
       }
     }
     vctx.shadowBlur = 0;
-    requestAnimationFrame(drawVis);
+    if (visShouldRun()) visRAF = requestAnimationFrame(drawVis);
   }
-  requestAnimationFrame(drawVis);
+  kickVis(true); // draw the resting baseline once at startup, then park
+  setInterval(kickVis, 500); // watchdog for play paths that don't kick directly
+  document.addEventListener('visibilitychange', () => kickVis(true));
 
   // ---- transport wiring --------------------------------------
   // while a CRT video is the active source the transport drives *it*
@@ -1940,6 +2076,7 @@
     return P.snapshot().playing;
   };
   const doPlay = () => {
+    kickVis(); // wake the visualiser loop if it parked while paused/stopped
     if (videoActive) return vctl('play');
     if (localActive) return LA.play().catch(() => {});
     consumeResume(); // first Play on a restored queue → own it + start stats
@@ -2093,6 +2230,7 @@
     el.setCacheKeep.checked = cacheKeep;
     el.setCacheCap.value = String(cacheCapMB);
     el.setKeepQueue.checked = keepQueue;
+    el.setQueueCap.value = String(queueCap);
     el.setCombineTransport.checked = combineTransport;
     el.setTimeMode.value = state.timeMode;
     el.setMarqueeStatic.checked = state.marqueeStatic;
@@ -2170,6 +2308,11 @@
     else {
       try { localStorage.removeItem(LS_SESSION); } catch (_) {}
     }
+  });
+  el.setQueueCap.addEventListener('change', () => {
+    queueCap = +el.setQueueCap.value || 0;
+    localStorage.setItem('retro.queueCap', String(queueCap));
+    renderQueue(); // apply the new cap now (trims played tracks off the front)
   });
   el.setCombineTransport.addEventListener('change', () => {
     combineTransport = el.setCombineTransport.checked;
@@ -2255,6 +2398,7 @@
   el.setVisOn.addEventListener('change', () => {
     visOn = el.setVisOn.checked;
     localStorage.setItem('retro.visOn', visOn ? '1' : '0');
+    kickVis(true); // turned on → repaint/restart; turned off → parks next frame
   });
   el.setVisMode.addEventListener('change', () => {
     visMode = el.setVisMode.value;

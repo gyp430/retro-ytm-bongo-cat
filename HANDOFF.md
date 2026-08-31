@@ -325,6 +325,16 @@ Third column in `.pled-body` (`index.html` `#queue-panel`), all in `app.js`:
   dimmed. Per-row `×` remove, HTML5 drag to reorder (`moveInQueue` keeps
   `state.qi` pinned to the playing track). `clear` = keep only the playing
   track. Foot shows "N tracks · M up next · mm:ss left".
+- **Queue cap / auto-trim** (2026-08-31) — `⚙` → *Queue* → "Cap the queue"
+  (`retro.queueCap`; `0` = no limit, else 50/100/250/500/1000, default `250`).
+  `trimQueue()` runs at the top of every `renderQueue()`: once `state.queue`
+  outgrows the cap it `splice`s already-played tracks off the **front** (never
+  anything at or after `state.qi`), slides `state.qi` down by the drop count,
+  and prunes the dropped track-object refs from `playHist`. Trade-off: trimmed
+  tracks fall out of `prev()` reach (they're gone from `playHist` and
+  `state.queue.indexOf` → −1). Radio/mix refill gates compare
+  `state.queue.length - state.qi`, which the trim leaves unchanged, so trimming
+  never spuriously triggers a refill.
 - **prev / next history** (2026-08-30) — `playAt(i, fromHist)` pushes the
   outgoing track onto a `playHist` stack (cap 200). `prev()` (after the
   ">3 s → restart current" check, both the YT and local branch) pops that
@@ -444,6 +454,21 @@ columns: 160px 1fr`, areas `"readout vis"`) — readout/LCD on the left, the
 analyser fills the rest of the top row. `resizeVis()` (a `ResizeObserver` on
 `#vis`) keeps the canvas backing store matched to its box and sets `BARS`
 from the width. `drawVis()` runs off `P.snapshot().playing || videoPlaying`.
+
+**Idle-CPU: the rAF loop parks itself (2026-08-31).** `drawVis` no longer
+re-arms `requestAnimationFrame` unconditionally — 60 fps of shadow-blurred
+canvas was the app's biggest idle cost. Now: `visRAF` holds the frame handle
+(0 = parked); `drawVis` clears it on entry and, at the end, only re-schedules if
+`visShouldRun()` — playing (`P.snapshot().playing || videoPlaying ||
+localPlaying`), OR still visible+on with any bar/peak above a decay epsilon.
+Otherwise the loop stops. `kickVis()` restarts it; `kickVis(true)` also paints
+one resting-baseline frame when idle (cold start / `resizeVis` / visualiser-on /
+`visibilitychange`). A `setInterval(kickVis, 500)` watchdog covers any play path
+that doesn't call `kickVis` directly (also called explicitly from `doPlay`,
+`playAt`, the `#set-vis-on` handler). Hidden window (`document.hidden`) → parked.
+**Restart-on-play could only be verified in the real app** — the served-page
+test harness reports `document.hidden` permanently true, so the served page
+keeps it parked; idle-parking itself was confirmed there (0 frames in 2 s).
 
 **"Neon EQ" look (2026-08-28):** `resizeVis()` now sizes the backing store
 **DPR-scaled** (capped 2×, `VW`/`VH`/`VDPR`) and `drawVis()` does
@@ -593,16 +618,22 @@ YT err 101/150) · `retro.dlDir` (download folder abs path; absent =
 **`retro.tune`** (JSON — the ⚙ → *Tuning* knobs: `beatSens`, `grooveFill`,
 `eqHeight`, `eqCenter`, `eqBottom`, `eqGlow`, `eqCaps`; missing keys fall back to
 `TUNE_DEFAULTS` in `app.js`) ·
-**`retro.artistMix`** (JSON `[{id,name}]` — the ARTIST MIX pool, §5h) ·
+**`retro.artistMix`** (JSON `[{id,name}]` — the live ARTIST MIX pool, §5h) ·
 **`retro.artistMixOn`** (`'1'`/`'0'` — mix armed) ·
+**`retro.artistMixes`** (JSON `{ "<name>": [{id,name}], … }` — named, switchable
+ARTIST MIX presets; the `▾` button by the `mix` toggle saves / loads / deletes,
+§5h) ·
 **`retro.keepQueue`** (`'1'`/`'0'` — "Restore queue on startup", default off, §5i) ·
 **`retro.session`** (JSON `{v,queue,qi,pos,ts}` — the saved queue; written only
 when `retro.keepQueue`, §5i) ·
+**`retro.queueCap`** (`'0'` = no limit, else `'50'`/`'100'`/`'250'`/`'500'`/`'1000'`
+— ⚙ → *Queue* "Cap the queue"; `trimQueue()` drops already-played tracks off the
+front once the queue outgrows it, default `250`, §5b) ·
 **`retro.combineTransport`** (`'1'`/`'0'` — one play/pause button, default off, §5j) ·
 **`retro.timeMode`** (`'elapsed'`/`'remaining'`/`'both'` — LCD time readout, default
 `elapsed`, §5j) ·
-**`retro.marqueeStatic`** (`'1'`/`'0'` — static NOW-only marquee vs scrolling
-prev·NOW·next, default off, §5f.1).
+**`retro.marqueeStatic`** (`'1'`/`'0'` — static marquee vs scrolling; static now
+shows a 2-line prev/NOW/next stack, not NOW-only, default off, §5f.1).
 Imported local files are **not** persisted (object URLs die on reload) and are
 dropped from `retro.session`; the rest of the queue now **is** persisted when
 `retro.keepQueue` is on. The
@@ -827,7 +858,8 @@ theme picker). Contents:
 - **Volume** (`#set-vol`) — live volume *and* the startup default
   (`retro.vol`); drives `P.setVolume` + `LA.volume`.
 - **Reset window zoom** → `window.retro.resetZoom()`.
-- **Show visualizer** (`retro.visOn`) — when off, `drawVis` clears + idles.
+- **Show visualizer** (`retro.visOn`) — when off, `drawVis` clears once and the
+  rAF loop parks (see §"Visualiser" idle-CPU note); `kickVis(true)` on re-enable.
 - **Mode** (`retro.visMode`) — `auto` (real FFT for local) / `sim` (always).
 - **Download folder** (`#set-dl-dir` label + *Change…* / *Use default*) —
   `window.retro.pickFolder()` → IPC `dialog:folder` → native dir picker;
@@ -888,11 +920,17 @@ next). Scroll `animation-duration` now scales with `scrollWidth` (`/42`, clamped
 12–48 s) so three titles don't whip past. CSS: `.mq-now` / `.mq-side` / `.mq-sep`
 in `winamp.css`.
 
-**Static mode (2026-08-30):** `⚙` → Playback → *Static now-playing bar*
-(`#set-marquee-static`, `state.marqueeStatic`, `retro.marqueeStatic`, default
-off). When on, `setNowPlaying` renders **NOW only** (no prev/next) and never adds
-`.scroll`; `#marquee` gets a `.static` class → `winamp.css` centres `#track-title`,
-zeroes its `padding-left:100%`, and `text-overflow:ellipsis` clips a long title.
+**Static mode (2026-08-30, revised 2026-08-31):** `⚙` → Playback → *Static
+now-playing bar* (`#set-marquee-static`, `state.marqueeStatic`,
+`retro.marqueeStatic`, default off). When on, `setNowPlaying` still enters the
+prev/NOW/next branch (the `!state.marqueeStatic` guard was dropped) but emits a
+**2-line stack** instead of the inline scroll: `<span class="mq-l1 mq-now">◄► now`
+on top, `<span class="mq-l2">◄ prev • next ►` (smaller, dim) beneath — no
+`.scroll`. `#marquee` gets `.static` → `winamp.css` switches it to
+`height:auto;min-height:24px`, makes `#track-title` a centred flex column, and
+ellipsises each line (`#track-title>*`). The `.display` grid row `mq` is `auto`
+so the visualiser row above gives up the extra ~10 px. Shuffle / boot /
+nothing-playing still collapse to the single `◄► now` (or `⤨ now`) line.
 `lastNowTrack` is cached so the toggle repaints immediately.
 
 ### 5f.2 FOR YOU — recommendations + artists
@@ -1146,13 +1184,24 @@ into the queue as it runs low — a broader alternative to radio. All in `app.js
 + one new endpoint. Needs a full `npm start` (server route).
 
 - **Markup** (`index.html`): `#aq-section` = `.qp-head` ("ARTIST MIX" +
-  `#aq-toggle` "mix" button) · `.aq-add` (`#aq-input` + `#aq-add-btn` `＋`) ·
-  `#aq-list` (chip rows, per-row `×`) · `#aq-foot`. New `#pled-toggles` button
-  `data-panel="artists"` → `PANEL_NODES.artists` = `#aq-section`; the queue
-  column now drops only when queue **and** artists **and** lists are all off.
+  `.qp-head-btns` wrapping `#aq-presets` `▾` and `#aq-toggle` "mix") · `.aq-add`
+  (`#aq-input` + `#aq-add-btn` `＋`) · `#aq-list` (chip rows, per-row `×`) ·
+  `#aq-foot`. New `#pled-toggles` button `data-panel="artists"` →
+  `PANEL_NODES.artists` = `#aq-section`; the queue column now drops only when
+  queue **and** artists **and** lists are all off.
 - **State:** `state.artistMix = [{id,name}]` (→ `localStorage['retro.artistMix']`),
   `state.artistMixOn` (→ `retro.artistMixOn`). `aqSeen` Set dedupes within a
   session. `saveArtistMix()` persists both.
+- **Named presets** (2026-08-31): `#aq-presets` `▾` opens a `showCtx` menu
+  anchored under the button (synthetic `{clientX,clientY}` from its rect):
+  *＋ Save current as…* (`askText` → `retro.artistMixes[name] = state.artistMix`
+  copy), then per saved name a **Load** entry (`loadArtistMixPreset` — replaces
+  `state.artistMix`, clears `aqSeen`, `saveArtistMix()`, `renderArtistMix()`,
+  re-kicks `extendArtistMix` if armed) and a **✕ Delete** entry (`askConfirm`).
+  Store `localStorage['retro.artistMixes']` = `{ "<name>": [{id,name}], … }` via
+  `loadArtistMixes()` / `saveArtistMixes()`. `state.artistMix` stays the live
+  working pool; presets are named copies. The opener `stopPropagation`s so the
+  document-click close handler doesn't kill the menu on the same click.
 - **Add an artist:** type a name → `#aq-add-btn` / Enter → `aqSearchAdd()` →
   `GET /search-artists?q=` → adds the top match. **Or drag** a `FAVOURITE /
   SUGGESTED ARTISTS` row from FOR YOU — those `.recs-artist` rows are now

@@ -187,7 +187,10 @@
         <div id="aq-section">
           <div class="qp-head qp-head--lists">
             <span>ARTIST MIX</span>
-            <button id="aq-toggle" title="Shuffle songs from these artists into the queue as it runs low">mix</button>
+            <span class="qp-head-btns">
+              <button id="aq-presets" title="Saved mixes — save / load / delete named artist pools">&#9662;</button>
+              <button id="aq-toggle" title="Shuffle songs from these artists into the queue as it runs low">mix</button>
+            </span>
           </div>
           <div class="aq-add">
             <input id="aq-input" type="text" placeholder="add artist…" spellcheck="false" />
@@ -307,6 +310,20 @@
     <p class="set-hint">Remembers the queue, the current track and its position
       between sessions. Reopens paused — press Play to resume. Imported local
       files are skipped (they don't survive a restart).</p>
+    <label class="set-row">
+      <span>Cap the queue <span class="set-hint">(trims played tracks)</span></span>
+      <select id="set-queue-cap">
+        <option value="0">No limit</option>
+        <option value="50">50 tracks</option>
+        <option value="100">100 tracks</option>
+        <option value="250">250 tracks</option>
+        <option value="500">500 tracks</option>
+        <option value="1000">1000 tracks</option>
+      </select>
+    </label>
+    <p class="set-hint">Radio and Artist Mix keep appending tracks. Past the cap,
+      already-played tracks are dropped from the front to keep the queue snappy —
+      they leave "previous" reach when trimmed.</p>
 
     <h3>Visualizer</h3>
     <label class="set-row set-row--check">

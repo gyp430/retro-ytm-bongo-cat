@@ -150,12 +150,24 @@ button{font:inherit;color:var(--text);cursor:pointer;}
 }
 #track-title.scroll{animation:marq 14s linear infinite;}
 @keyframes marq{from{transform:translateX(0);}to{transform:translateX(-100%);}}
-/* ⚙ "Static now-playing bar" — no scroll: centre it, ellipsis if it overflows */
-.marquee.static{text-align:center;}
-.marquee.static #track-title{
-  display:block;padding-left:0;max-width:100%;
-  overflow:hidden;text-overflow:ellipsis;animation:none;
+/* ⚙ "Static now-playing bar" — no scroll, but still shows prev/next: a 2-line
+   stack (NOW on top, dim prev · next beneath). .marquee grows to fit; the grid
+   row it sits in is `auto`, so the visualiser row above takes the difference. */
+.marquee.static{
+  height:auto;min-height:24px;white-space:normal;
+  display:flex;align-items:center;justify-content:center;
+  padding:2px 6px;text-align:center;
 }
+.marquee.static #track-title{
+  display:flex;flex-direction:column;align-items:center;gap:1px;
+  width:100%;padding-left:0;animation:none;
+}
+.marquee.static #track-title>*{
+  display:block;width:100%;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;
+}
+.marquee.static .mq-l2{font-size:9px;opacity:.7;}
+.marquee.static .mq-l2 .mq-sep{margin:0 6px;}
 /* prev · NOW · next segments inside the marquee */
 #track-title .mq-now{color:var(--lcd);}
 #track-title .mq-side{color:var(--lcd-dim);text-shadow:none;}
@@ -355,6 +367,7 @@ button{font:inherit;color:var(--text);cursor:pointer;}
   background:var(--list-head-bg);color:var(--lcd-dim);
 }
 .qp-head--lists{margin-top:2px;border-top:1px solid var(--screen-edge);}
+.qp-head-btns{display:flex;align-items:center;gap:3px;}
 .qp-head button{
   font-size:8px;letter-spacing:.5px;padding:2px 6px;color:var(--text);
   background:linear-gradient(var(--btn-a),var(--btn-b));

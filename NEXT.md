@@ -83,6 +83,9 @@ Nothing below was exercised in a running Electron app; drive each once.
   in `buildCentreWindow()`.
 - **Radio breadth:** `extendRadioNow()` — the `distinctArtists(origin) >= 4`
   gate and `diversifyTracks(fresh, 2, 14)` caps; server `/related` `radio=True`.
+  Same-song flooding is filtered by `normTitle()` + `dedupByTitle()` +
+  `radioTitleSeen` — widen/narrow the `RADIO_NOISE` regex to tune how
+  aggressively near-dup titles collapse.
 
 ---
 

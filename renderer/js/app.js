@@ -1275,17 +1275,61 @@
   }
   let extending = false;
   const radioSeen = new Set(); // videoIds already offered by radio this session
+  const radioTitleSeen = new Set(); // normalised titles radio has served this session
 
   const artistKey = (t) =>
     String((t && (t.artistId || t.artists)) || '').toLowerCase().trim();
 
+  // strip a title down to its bare identity so radio stops refilling with the
+  // same song wearing different hats — "<song>", "<song> (Extended)", "<song>
+  // (Eurobeat Remix)", "<song> [Initial D]", "Artist - <song>", nightcore/sped-up
+  // re-uploads, topic vs MV uploads. Aggressive on purpose (radio wants variety).
+  const RADIO_NOISE =
+    /\b(?:official|video|audio|lyrics?|visualizer|m\/?v|hd|hq|4k|full|version|ver|extended|radio\s*edit|radio\s*mix|club\s*mix|original\s*mix|remaster(?:ed)?|remix|bootleg|nightcore|sped\s*up|slowed|reverb|super\s*eurobeat|eurobeat|initial\s*d|8d)\b/g;
+  const deAccent = (s) => s.normalize('NFD').replace(/\p{M}/gu, ''); // "déjà" → "deja"
+  const normTitle = (title, artist) => {
+    let x = deAccent(String(title || '').toLowerCase());
+    const a = deAccent(String(artist || '').toLowerCase().trim());
+    if (a.length > 2) x = x.split(a).join(' '); // drop an artist name baked into the title
+    return x
+      .replace(/\([^)]*\)|\[[^\]]*\]|\{[^}]*\}|~[^~]*~|【[^】]*】|『[^』]*』|「[^」]*」/g, ' ')
+      .replace(/\b(?:feat|ft|featuring|prod|with)\b.*$/i, ' ')
+      .replace(RADIO_NOISE, ' ')
+      .replace(/[^\p{L}\p{N}]+/gu, '')
+      .trim();
+  };
+  const rememberRadioTitles = (list) => {
+    for (const t of list) {
+      const nk = normTitle(t.title, t.artists);
+      if (nk) radioTitleSeen.add(nk);
+    }
+  };
+  // keep only the first track per normalised title; when dropSessionSeen is set,
+  // also drop titles radio already served this session (the near-dup flood guard)
+  const dedupByTitle = (list, dropSessionSeen) => {
+    const seen = new Set();
+    const out = [];
+    for (const t of list) {
+      const nk = normTitle(t.title, t.artists);
+      if (nk) {
+        if (seen.has(nk)) continue;
+        if (dropSessionSeen && radioTitleSeen.has(nk)) continue;
+        seen.add(nk);
+      }
+      out.push(t);
+    }
+    return out;
+  };
+
   // trim a candidate list so no single artist dominates one refill — keeps
-  // radio from stacking a pile of tracks by the seed's artist in a row
+  // radio from stacking a pile of tracks by the seed's artist in a row. Tracks
+  // with no artist (eurobeat comps, "Various Artists") are bucketed by title so
+  // they can't slip past the cap.
   function diversifyTracks(list, perArtist, max) {
     const seen = new Map();
     const out = [];
     for (const t of list) {
-      const k = artistKey(t);
+      const k = artistKey(t) || 't:' + normTitle(t.title, t.artists);
       const n = k ? seen.get(k) || 0 : 0;
       if (k && n >= perArtist) continue;
       if (k) seen.set(k, n + 1);
@@ -1312,6 +1356,7 @@
     const have = new Set(state.queue.map((t) => t.videoId));
     const origin = state.originTracks || [];
     const cur = state.queue[state.qi] || {};
+    rememberRadioTitles(state.queue); // never re-offer a song that's already queued
 
     // 1) drain whatever's left of the search / playlist that started this queue
     //    — BUT only when the origin is genuinely varied. Opening an artist or
@@ -1319,11 +1364,15 @@
     //    that is exactly the "queue fills with the same artist" bug, so skip
     //    straight to the station in that case.
     if (distinctArtists(origin) >= 4) {
-      const rest = origin.filter((t) => t.videoId && !have.has(t.videoId));
+      const rest = dedupByTitle(
+        origin.filter((t) => t.videoId && !have.has(t.videoId)),
+        true
+      );
       if (rest.length) {
         const chunk = diversifyTracks(rest, 3, 20);
         state.queue.push(...chunk);
         chunk.forEach((t) => have.add(t.videoId));
+        rememberRadioTitles(chunk);
         console.info(`[retro] radio — +${chunk.length} from the origin list`);
         toast(`≈ ${chunk.length} more from your list`);
         renderQueue();
@@ -1370,14 +1419,19 @@
             merged.push(t);
           }
       merged.sort(() => Math.random() - 0.5); // don't front-load one seed's list
-      const fresh = merged.filter(
+      const vidFresh = merged.filter(
         (t) => t.videoId && !have.has(t.videoId) && !radioSeen.has(t.videoId)
       );
+      // drop near-dups of anything radio already served; if a niche seed leaves
+      // us with almost nothing, relax to video-id-only so radio doesn't stall
+      let fresh = dedupByTitle(vidFresh, true);
+      if (fresh.length < 3) fresh = dedupByTitle(vidFresh, false);
       const chunk = diversifyTracks(fresh, 2, 14); // artist-capped bite
       console.info(
-        `[retro] radio — ${seedIds.length} seed(s) → ${merged.length} cand → +${chunk.length}`
+        `[retro] radio — ${seedIds.length} seed(s) → ${merged.length} cand → ${fresh.length} fresh → +${chunk.length}`
       );
       chunk.forEach((t) => radioSeen.add(t.videoId));
+      rememberRadioTitles(chunk);
       state.queue.push(...chunk);
       if (chunk.length) toast(`≈ ${chunk.length} similar tracks`);
       renderQueue();

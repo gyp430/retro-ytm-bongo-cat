@@ -43,11 +43,14 @@ so a few hundred entries → visible stutter (worse with "Restore queue on
 startup" on, since `saveSession()` re-serialises the lot every 1.2 s).
 
 **Want:**
-- Auto-trim played history: keep ~40 tracks behind `state.qi` + everything
-  upcoming, hard ceiling ~300; drop from the front and subtract the drop count
-  from `state.qi` (and from any queue-index bookkeeping).
-- Optional `⚙` setting `retro.queueCap` (Off / 100 / 250 / 500) for people who
-  want more history; default = the always-on ~40-behind trim.
+- A **dropdown in `⚙` settings** (Queue section, next to "Restore queue on
+  startup") where the user picks the cap: **No limit / 50 / 100 / 250 / 500 /
+  1000**. Persisted as `retro.queueCap` (default e.g. `250`).
+- When the queue exceeds the cap, trim **already-played** tracks from the front
+  (never anything at or after `state.qi`), and subtract the drop count from
+  `state.qi` (and from any queue-index bookkeeping).
+- `#set-queue-cap` `<select>` in `index.html`; `el.setQueueCap` + a `change`
+  handler + `syncSettings()` line, mirroring `#set-cache-cap`.
 
 **Watch out:**
 - `prev()` walks `playHist` (track-object refs) via `state.queue.indexOf(...)`;

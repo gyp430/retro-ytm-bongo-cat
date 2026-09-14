@@ -309,10 +309,12 @@ button{font:inherit;color:var(--text);cursor:pointer;}
   border-top:1px solid var(--bevel-light);border-left:1px solid var(--bevel-light);
   border-right:1px solid var(--bevel-dark);border-bottom:1px solid var(--bevel-dark);
 }
-#q-mode{
+#q-mode,#q-albums{
   flex:0 0 auto;width:22px;padding:3px 0;text-align:center;
   font:11px "Consolas",monospace;color:var(--lcd);
 }
+#q-albums{opacity:.45;} /* off by default — full opacity + glow once toggled on */
+#q-albums.on{opacity:1;text-shadow:0 0 4px var(--lcd-glow);}
 .pl-tracks{list-style:none;overflow:auto;flex:1;counter-reset:row;}
 .pl-tracks li{
   display:flex;gap:6px;cursor:pointer;white-space:nowrap;
@@ -345,10 +347,11 @@ button{font:inherit;color:var(--text);cursor:pointer;}
   border-top:1px solid var(--screen-edge);margin-top:3px;
 }
 .pl-tracks li.grp:hover{background:var(--row-hover);}
-.pl-tracks li.grp:before,.pl-tracks li.vid:before{counter-increment:none;}
+.pl-tracks li.grp:before,.pl-tracks li.vid:before,.pl-tracks li.alb:before{counter-increment:none;}
 .pl-tracks li.grp:before{content:"\25BE";margin-right:5px;color:var(--lcd-dim);}
 .pl-tracks li.grp.collapsed:before{content:"\25B8";}
 .pl-tracks li.vid:before{content:"\25B6";color:var(--lcd-dim);font-size:8px;}
+.pl-tracks li.alb:before{content:"\1F4BF";color:var(--lcd-dim);font-size:9px;}
 .pl-tracks li.vid .t-sub{
   flex:0 1 auto;min-width:0;max-width:130px;overflow:hidden;text-overflow:ellipsis;
   color:var(--text-faint);font-size:9px;

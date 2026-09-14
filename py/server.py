@@ -102,6 +102,23 @@ def track(t):
     }
 
 
+def album_row(a):
+    """One row for an album list — a search result or an artist's discography
+    entry. Not a playable track; the client fetches /album/<browseId> for the
+    track list. Shape mirrors track() loosely for the same reason."""
+    return {
+        "browseId": a.get("browseId"),
+        "title": a.get("title"),
+        "artists": ", ".join(
+            x["name"] for x in (a.get("artists") or []) if x.get("name")
+        )
+        or (a.get("artist") or ""),
+        "year": a.get("year"),
+        "type": a.get("type"),  # "Album" / "Single" / "EP" (search results only)
+        "thumbnail": (a.get("thumbnails") or [{}])[-1].get("url"),
+    }
+
+
 def require_auth():
     return yt is not None
 
@@ -355,6 +372,49 @@ def search():
     return jsonify([track(r) for r in res if r.get("videoId")])
 
 
+@app.get("/search-albums")
+def search_albums():
+    """Album search — the search bar's toggle-able "albums" mode. Rows aren't
+    playable directly; the client opens one via GET /album/<browseId>."""
+    if not require_auth():
+        return err("not authenticated", 401)
+    q = (request.args.get("q") or "").strip()
+    if not q:
+        return jsonify([])
+    try:
+        res = yt.search(q, filter="albums", limit=10)[:10]
+    except Exception as exc:
+        traceback.print_exc()
+        return err(str(exc), 502)
+    return jsonify([album_row(r) for r in res if r.get("browseId")])
+
+
+@app.get("/album/<browse_id>")
+def album(browse_id):
+    """One album's tracks, in album order (so "play whole album" is just
+    playing the queue it returns). browseId comes from a /search-albums or
+    /artist row."""
+    if not require_auth():
+        return err("not authenticated", 401)
+    try:
+        a = yt.get_album(browse_id)
+    except Exception as exc:
+        traceback.print_exc()
+        return err(str(exc), 502)
+    tracks = [track(t) for t in (a.get("tracks") or []) if t.get("videoId")]
+    return jsonify(
+        {
+            "title": a.get("title"),
+            "artists": ", ".join(
+                x["name"] for x in (a.get("artists") or []) if x.get("name")
+            ),
+            "year": a.get("year"),
+            "thumbnail": (a.get("thumbnails") or [{}])[-1].get("url"),
+            "tracks": tracks,
+        }
+    )
+
+
 @app.get("/search-artists")
 def search_artists():
     """Artist name search — used by the ARTIST MIX panel to add artists.
@@ -588,7 +648,8 @@ def artists():
 @app.get("/artist/<channel_id>")
 def artist(channel_id):
     """One artist: top tracks (resolved to the full 'songs' playlist when
-    possible) + related artists. Row tracks reuse the normal track shape."""
+    possible) + albums + related artists. Row tracks reuse the normal track
+    shape; albums reuse album_row (open via GET /album/<browseId>)."""
     if not require_auth():
         return err("not authenticated", 401)
     cid = _channel_id(channel_id)
@@ -610,6 +671,11 @@ def artist(channel_id):
                 tracks = full
         except Exception:
             traceback.print_exc()
+    albums = [
+        album_row(r)
+        for r in ((a.get("albums") or {}).get("results") or [])
+        if r.get("browseId")
+    ]
     related = [
         {
             "channelId": r.get("browseId"),
@@ -625,6 +691,7 @@ def artist(channel_id):
             "channelId": cid,
             "subscribers": a.get("subscribers"),
             "tracks": tracks,
+            "albums": albums,
             "related": related,
         }
     )

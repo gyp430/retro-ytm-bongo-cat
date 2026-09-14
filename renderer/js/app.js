@@ -83,6 +83,8 @@
     q: $('q'),
     qGo: $('q-go'),
     qMode: $('q-mode'),
+    qAlbums: $('q-albums'),
+    artistPageToggle: $('artist-page-toggle'),
     queuePanel: $('queue-panel'),
     queueList: $('queue-list'),
     queueFoot: $('queue-foot'),
@@ -2963,6 +2965,17 @@
     if (el.q.value.trim()) doSearch();
   };
 
+  // ⚙-less standalone toggle: "also fetch albums" (independent of the
+  // all/music/video scope cycle above — orthogonal, not another mode)
+  let searchAlbums = localStorage.getItem('retro.searchAlbums') === '1';
+  el.qAlbums.classList.toggle('on', searchAlbums);
+  el.qAlbums.onclick = () => {
+    searchAlbums = !searchAlbums;
+    localStorage.setItem('retro.searchAlbums', searchAlbums ? '1' : '0');
+    el.qAlbums.classList.toggle('on', searchAlbums);
+    if (el.q.value.trim()) doSearch();
+  };
+
   // ---- collapsible group headers (All-mode "♪ MUSIC" / "▶ VIDEO") --------
   function groupHeader(grp, label) {
     const li = document.createElement('li');
@@ -2978,6 +2991,76 @@
       });
     });
     return li;
+  }
+
+  // ---- albums (search toggle + artist-page discography) ------------------
+  // Not playable rows themselves — click opens the album (GET /album/<id>)
+  // into the track pane, same as an artist or playlist view; ▶ plays it
+  // straight through in album order (no shuffle, unlike playArtist()).
+  function albumRow(a) {
+    const li = document.createElement('li');
+    li.className = 'alb';
+    li.title = 'Open album';
+    li.innerHTML =
+      `<span class="t-title">${escapeHtml(
+        (a.artists ? a.artists + ' — ' : '') +
+          (a.title || '?') +
+          (a.year ? '  (' + a.year + ')' : '')
+      )}</span>` + `<button class="t-add" title="Play album">▶</button>`;
+    li.addEventListener('click', () => openAlbum(a.browseId, a));
+    li.querySelector('.t-add').addEventListener('click', (e) => {
+      e.stopPropagation();
+      playAlbum(a.browseId, a);
+    });
+    return li;
+  }
+  function appendAlbumGroup(albums) {
+    if (!albums || !albums.length) return;
+    const before = el.tracks.children.length;
+    albums.forEach((a) => {
+      const li = albumRow(a);
+      li.dataset.grp = 'albums';
+      el.tracks.appendChild(li);
+    });
+    el.tracks.insertBefore(
+      groupHeader('albums', `💿  ALBUMS · ${albums.length}`),
+      el.tracks.children[before]
+    );
+  }
+  async function openAlbum(id, meta) {
+    if (!id) return;
+    setActiveName(null);
+    setActiveRec(null);
+    const label = (meta && (meta.artists ? meta.artists + ' — ' : '') + meta.title) || 'album';
+    el.foot.textContent = 'loading ' + label + '…';
+    try {
+      const d = await API.album(id);
+      const heading =
+        '💿 ' + ((d.artists ? d.artists + ' — ' : '') + (d.title || label));
+      state.originTracks = d.tracks || [];
+      renderTracks(d.tracks || [], heading);
+    } catch (e) {
+      el.foot.textContent = 'failed: ' + (e.message || e);
+    }
+  }
+  async function playAlbum(id, meta) {
+    if (!id) return;
+    try {
+      const d = await API.album(id);
+      const q = (d.tracks || []).slice();
+      if (!q.length) return toast('no tracks for this album');
+      state.queue = q;
+      state.originTracks = q;
+      state.qi = -1;
+      state.radio = false;
+      el.tpRadio.classList.remove('on');
+      const heading =
+        '💿 ' + ((d.artists ? d.artists + ' — ' : '') + (d.title || (meta && meta.title) || ''));
+      renderTracks(q, heading);
+      playAt(0);
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+    }
   }
 
   // normalise a /video-search row into the same shape as a music track so it
@@ -3066,6 +3149,13 @@
           );
         }
         renderVideoResults(vids, q, { append: true });
+      }
+      if (searchAlbums) {
+        try {
+          appendAlbumGroup(await API.searchAlbums(q));
+        } catch (_) {
+          /* albums are a bonus group — a failure here shouldn't blank the results above */
+        }
       }
     } catch (e) {
       el.foot.textContent = 'search failed: ' + (e.message || e);
@@ -3343,7 +3433,21 @@
     artistTrackCache.set(id, d);
     return d;
   }
+  // bottom-row "artist page" toggle — whether clicking an artist name (FOR
+  // YOU today) navigates the track pane to their page at all. Off = the row
+  // is still there, ▶ still shuffle-plays them, it just won't take over your
+  // view. One guard here covers every caller instead of one per call site.
+  let artistPageOn = localStorage.getItem('retro.artistPageOn') !== '0'; // default on
+  if (el.artistPageToggle) {
+    el.artistPageToggle.classList.toggle('on', artistPageOn);
+    el.artistPageToggle.addEventListener('click', () => {
+      artistPageOn = !artistPageOn;
+      localStorage.setItem('retro.artistPageOn', artistPageOn ? '1' : '0');
+      el.artistPageToggle.classList.toggle('on', artistPageOn);
+    });
+  }
   async function openArtist(id, name) {
+    if (!artistPageOn) return;
     setActiveName(null);
     setActiveRec(null);
     el.foot.textContent = 'loading ' + name + '…';
@@ -3351,6 +3455,7 @@
       const d = await getArtist(id);
       state.originTracks = d.tracks || [];
       renderTracks(d.tracks || [], '🎤 ' + (d.name || name));
+      appendAlbumGroup(d.albums || []);
     } catch (e) {
       el.foot.textContent = 'failed: ' + (e.message || e);
     }

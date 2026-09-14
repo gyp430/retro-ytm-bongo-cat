@@ -25,6 +25,8 @@ window.RetroAPI = (() => {
         body: JSON.stringify({ headers }),
       }),
     search: (q) => j('/search?q=' + encodeURIComponent(q)),
+    searchAlbums: (q) => j('/search-albums?q=' + encodeURIComponent(q)),
+    album: (id) => j('/album/' + encodeURIComponent(id)),
     videoSearch: (q) => j('/video-search?q=' + encodeURIComponent(q)),
     playlists: () => j('/playlists'),
     playlist: (id) => j('/playlist/' + encodeURIComponent(id)),

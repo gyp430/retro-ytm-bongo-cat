@@ -633,7 +633,11 @@ front once the queue outgrows it, default `250`, §5b) ·
 **`retro.timeMode`** (`'elapsed'`/`'remaining'`/`'both'` — LCD time readout, default
 `elapsed`, §5j) ·
 **`retro.marqueeStatic`** (`'1'`/`'0'` — static marquee vs scrolling; static now
-shows a 2-line prev/NOW/next stack, not NOW-only, default off, §5f.1).
+shows a 2-line prev/NOW/next stack, not NOW-only, default off, §5f.1) ·
+**`retro.searchAlbums`** (`'1'`/`'0'` — search bar's 💿 toggle, include albums
+in results, default off, §5k) ·
+**`retro.artistPageOn`** (`'1'`/`'0'` — bottom-row "artist page" toggle,
+whether clicking an artist name navigates to their page, default on, §5k).
 Imported local files are **not** persisted (object URLs die on reload) and are
 dropped from `retro.session`; the rest of the queue now **is** persisted when
 `retro.keepQueue` is on. The
@@ -1380,6 +1384,69 @@ Both in `app.js`, `⚙` settings.
   `-c "import flask, ytmusicapi"` and uses the first that passes (tries
   `python` first), so this is handled — but `npm run setup` installs via
   `python -m pip`, so keep those in sync.
+
+---
+
+## 5k. Album browsing + playback (2026-09-14)
+
+YTM's own client can play a whole album start-to-finish; this app couldn't —
+`/search` only asked for `filter="songs"`, and `/artist/<id>` fetched but
+discarded `get_artist()`'s `albums` block. Now wired through, server + client,
+reusing the existing playlist/artist-view pattern (fetch tracks → `renderTracks`
+→ ordinary queue) rather than inventing a new player mode — playing the whole
+album is just queuing its tracks in album order and `playAt(0)`.
+
+**Server** (`server.py`):
+- `album_row(a)` — a non-playable album row `{browseId, title, artists, year,
+  type, thumbnail}`, shared by search results and an artist's discography.
+- `GET /search-albums?q=` — `yt.search(q, filter="albums", limit=10)[:10]` →
+  `album_row(r)` list.
+- `GET /album/<browseId>` — `yt.get_album(browseId)` → `{title, artists, year,
+  thumbnail, tracks}`; `tracks` reuses `track()` and is already in album order
+  (no shuffle — unlike `playArtist()`).
+- `GET /artist/<channel_id>` — now also returns `albums` (was fetched and
+  thrown away before): `album_row(r)` for each of `get_artist()`'s
+  `albums.results`.
+
+**Client** (`app.js` / `index.html` / `winamp.css`):
+- **Search toggle** — `#q-albums` (💿) next to `#q-mode`, in `#pl-search`.
+  Independent of the all/music/video scope cycle (orthogonal, not a 4th mode):
+  `searchAlbums` bool, `retro.searchAlbums`, default **off**. `doSearch()`
+  fetches `API.searchAlbums(q)` when on and appends a collapsible `💿 ALBUMS`
+  group via the existing `groupHeader()` mechanism (the same one the all-mode
+  ♪/▶ split already used) — a failed albums fetch doesn't blank the songs/video
+  results already rendered (isolated `try/catch`).
+- **`albumRow(a)` / `appendAlbumGroup(albums)`** — shared row-builder + group
+  inserter, used by both the search toggle and the artist page (below). A row
+  isn't a playable track: click → `openAlbum()` (loads the album's tracks into
+  the pane, like opening a playlist/artist); its `▶` button → `playAlbum()`
+  (queues + plays immediately, track order, no shuffle — distinct from
+  `playArtist()`'s shuffled queue).
+- **Artist page now also lists albums** — `openArtist()` calls
+  `appendAlbumGroup(d.albums || [])` after rendering the artist's top tracks
+  (same cached `/artist/<id>` response, `getArtist()`'s `artistTrackCache`).
+- **"artist page" bottom-row toggle** (`#artist-page-toggle`, `#pled-toggles`) —
+  *not* a `PANEL_NODES` panel (there's no separate DOM section to hide; artist
+  view reuses the shared track pane). `artistPageOn` bool, `retro.artistPageOn`,
+  default **on**. Single guard at the top of `openArtist()` — the only call site
+  in the file (`.recs-artist` row click in `renderForYou()`) — so off just means
+  clicking an artist name in FOR YOU does nothing; its `▶` shuffle-play button
+  is untouched (that's direct playback, not "the page").
+- CSS: `.pl-tracks li.alb` gets a `💿` row glyph (like `.vid`'s `▶`, replacing
+  the row-number counter); `#q-albums.on` gets the same lit-up treatment as
+  `#q-mode`/other toggles.
+
+**Verified** against a live sidecar (real auth): `/search-albums`,
+`/album/<id>`, and `/artist/<id>`'s new `albums` field all confirmed via curl;
+end-to-end in a served page — search with the toggle on produced a correct
+💿 ALBUMS group, clicking a result loaded all 19 tracks of an album in order,
+double-clicking track 1 queued the full album (`state.queue.length === 19`,
+`playAt(0)`), and the ▶ row button queued + played a different album
+immediately without the extra open step. Toggle persistence (`.on` class +
+localStorage) verified for both new buttons. `openArtist()`'s gating is a
+single-line static guard — no live FOR YOU artist to click in this sandbox
+(empty recs), so that specific path wasn't exercised end-to-end; the album
+group it appends is the exact same `appendAlbumGroup()` already proven above.
 
 ---
 

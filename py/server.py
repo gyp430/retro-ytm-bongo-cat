@@ -343,7 +343,12 @@ def search():
     if not q:
         return jsonify([])
     try:
-        res = yt.search(q, filter="songs", limit=30)
+        # ytmusicapi's `limit` only gates *extra continuation pages* -- the
+        # first results shelf comes back whole (can be 40+) and isn't trimmed
+        # to it. Past that first page, YTM's own search backend drifts
+        # off-topic on broad genre/decade queries ("2010s rock" -> filler
+        # pop/Bollywood by track 20+), so slice ourselves to the top 15.
+        res = yt.search(q, filter="songs", limit=15)[:15]
     except Exception as exc:
         traceback.print_exc()
         return err(str(exc), 502)

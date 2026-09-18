@@ -3199,26 +3199,44 @@
     }
   }
 
+  // spread across all of the top 5, not just whichever one hits first — a
+  // single well-covered #1 artist (100+ track catalogue) almost always
+  // cleared a "has unplayed tracks" bar on its own, so this used to just be
+  // "deep cuts of your #1 artist" in practice. Cap per artist so one deep
+  // catalogue can't still dominate the pool once several are blended.
+  const DEEP_CUTS_PER_ARTIST = 8;
   async function qpDeepCuts() {
     if (!state.authed) return toast('sign in first');
-    const top = topStatsArtists(5); // a few candidates in case #1 has nothing left unplayed
-    if (!top.length) return toast('play a few songs first so I know an artist to dig into');
+    const top = topStatsArtists(5);
+    if (!top.length) return toast('play a few songs first so I know some artists to dig into');
     const s = statLoad();
+    const pooled = [];
+    const picked = [];
     try {
       for (const a of top) {
-        const d = await getArtist(a.channelId);
+        let d;
+        try {
+          d = await getArtist(a.channelId);
+        } catch (_) {
+          continue;
+        }
         const unplayed = (d.tracks || []).filter(
           (t) => t.videoId && !(s.tracks[t.videoId] && s.tracks[t.videoId].plays)
         );
-        if (unplayed.length >= 5) {
-          const name = d.name || a.name;
-          return quickPlayQueue(unplayed, '⛏ Deep cuts — ' + name, {
-            shuffle: true,
-            toast: '⛏ deep cuts — ' + name,
-          });
+        if (!unplayed.length) continue;
+        for (let i = unplayed.length - 1; i > 0; i--) {
+          const j = (Math.random() * (i + 1)) | 0;
+          [unplayed[i], unplayed[j]] = [unplayed[j], unplayed[i]];
         }
+        pooled.push(...unplayed.slice(0, DEEP_CUTS_PER_ARTIST));
+        picked.push(d.name || a.name);
       }
-      toast("you've already heard everything from your top artists — try Surprise me instead");
+      if (!pooled.length)
+        return toast("you've already heard everything from your top artists — try Surprise me instead");
+      quickPlayQueue(pooled, '⛏ Deep cuts — ' + picked.join(' + '), {
+        shuffle: true,
+        toast: '⛏ deep cuts — ' + picked.join(' + '),
+      });
     } catch (e) {
       toast('failed: ' + (e.message || e));
     }

@@ -1498,7 +1498,18 @@ queue's "mm:ss left" footer under-counts these; upgrade path is a batched
   2 albums (fan-out cap — this one's the slowest, several sequential fetches).
 - **Deep cuts** — walks `topStatsArtists(5)` (existing helper, feeds FOR YOU's
   merge too), for each fetches their full catalogue and filters to tracks with
-  **no** local plays; stops at the first artist with ≥5 unplayed tracks.
+  **no** local plays, shuffles each artist's leftovers and caps at
+  `DEEP_CUTS_PER_ARTIST = 8`, pools across **all** artists that had any
+  unplayed tracks (not just the first hit). **2026-09-18 fix:** it used to
+  stop at the first artist with ≥5 unplayed tracks — in practice that was
+  almost always artist #1 (any well-covered artist's 100+ track catalogue
+  trivially clears that bar), so "Deep cuts" was really just "deep cuts of
+  your #1 artist" and the "walks your top 5" framing was misleading. User
+  noticed ("funny cuz it only played battle beast lol") and asked for it to
+  actually spread. Verified against a live sidecar with seeded stats across 3
+  real artists (Eminem/Metallica/Nirvana, each faked as fully-unplayed): 24
+  tracks back (8 × 3), genuinely interleaved across all three in the queue,
+  heading correctly `⛏ Deep cuts — Eminem + Metallica + Nirvana`.
 
 **New capability — genre/mood picker** (revised 2026-09-18 — see below):
 - `GET /mood-categories` (`server.py`) → `yt.get_mood_categories()` flattened

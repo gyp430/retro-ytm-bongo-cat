@@ -70,6 +70,7 @@
     tpPause: $('tp-pause'),
     tpStop: $('tp-stop'),
     tpNext: $('tp-next'),
+    qpBtn: $('tp-quickplay'),
     tpShuffle: $('tp-shuffle'),
     tpRepeat: $('tp-repeat'),
     tpRadio: $('tp-radio'),
@@ -3062,6 +3063,261 @@
       toast('failed: ' + (e.message || e));
     }
   }
+
+  // ---- quick play — flyout on the transport row, left of shuffle ---------
+  // Nine one-click "start me a mix" entries. All funnel through
+  // quickPlayQueue(): replace the queue, drop radio (this owns the tail now,
+  // same rule as artist/album plays), render, play index 0.
+  function quickPlayQueue(tracks, heading, opts) {
+    opts = opts || {};
+    if (!tracks || !tracks.length) return toast(opts.emptyMsg || 'nothing to play yet');
+    let q = tracks.slice();
+    if (opts.shuffle) {
+      for (let i = q.length - 1; i > 0; i--) {
+        const j = (Math.random() * (i + 1)) | 0;
+        [q[i], q[j]] = [q[j], q[i]];
+      }
+    }
+    state.queue = q;
+    state.originTracks = q;
+    state.qi = -1;
+    state.radio = false;
+    el.tpRadio.classList.remove('on');
+    renderTracks(q, heading);
+    playAt(0);
+    if (opts.toast) toast(opts.toast);
+  }
+  // a bare track built straight from a local stats record (keyed by videoId) —
+  // no duration/thumbnail (stats never stored them). ponytail: the queue's
+  // "mm:ss left" footer under-counts these; upgrade path is a batched /song
+  // lookup, not worth the round trips just for that.
+  const statTrackObj = (videoId, r) => ({
+    videoId,
+    title: r.title,
+    artists: r.artists || '',
+    artistId: r.artistId || null,
+  });
+
+  function qpRecentlyListened() {
+    const s = statLoad();
+    const rows = Object.entries(s.tracks || {})
+      .filter(([, r]) => r && r.last)
+      .sort((a, b) => b[1].last - a[1].last)
+      .slice(0, 25)
+      .map(([vid, r]) => statTrackObj(vid, r));
+    quickPlayQueue(rows, '🕘 Recently listened to', {
+      toast: '🕘 recently listened to',
+      emptyMsg: 'no listening history yet',
+    });
+  }
+
+  function qpUsualListen() {
+    const s = statLoad();
+    const rows = Object.entries(s.tracks || {})
+      .filter(([, r]) => r && r.plays)
+      .sort((a, b) => b[1].plays - a[1].plays || b[1].ms - a[1].ms)
+      .slice(0, 25)
+      .map(([vid, r]) => statTrackObj(vid, r));
+    quickPlayQueue(rows, '🔁 What you usually listen to', {
+      shuffle: true,
+      toast: '🔁 your regulars',
+      emptyMsg: 'no listening history yet',
+    });
+  }
+
+  function qpGiveAnotherChance() {
+    const s = statLoad();
+    const rows = Object.entries(s.tracks || {})
+      .filter(([, r]) => r && r.skips)
+      .sort((a, b) => b[1].skips - a[1].skips)
+      .slice(0, 20)
+      .map(([vid, r]) => statTrackObj(vid, r));
+    quickPlayQueue(rows, '↺ Give it another chance', {
+      shuffle: true,
+      toast: '↺ tracks you skipped before',
+      emptyMsg: "you haven't skipped anything yet",
+    });
+  }
+
+  function qpLocalShuffled() {
+    quickPlayQueue(localTracks, '📁 Local files, shuffled', {
+      shuffle: true,
+      toast: '📁 local files, shuffled',
+      emptyMsg: 'no local files imported — ⚙ → Import files',
+    });
+  }
+
+  async function qpLikedShuffled() {
+    if (!state.authed) return toast('sign in first');
+    try {
+      const d = await API.playlist('LM');
+      quickPlayQueue(d.tracks || [], '★ Liked Music, shuffled', {
+        shuffle: true,
+        toast: '★ liked music, shuffled',
+        emptyMsg: 'no liked songs yet',
+      });
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+    }
+  }
+
+  // shared by surprise-me / new-from-favourites — both read artistsCache;
+  // wait a beat for a boot-time load already in flight instead of racing it
+  async function ensureArtistsCache() {
+    if (artistsCache) return artistsCache;
+    loadArtists();
+    for (let i = 0; i < 20 && !artistsCache; i++)
+      await new Promise((r) => setTimeout(r, 150)); // up to ~3s
+    return artistsCache;
+  }
+
+  async function qpSurpriseMe() {
+    if (!state.authed) return toast('sign in first');
+    toast('🎲 finding something new…');
+    const cache = await ensureArtistsCache();
+    const sug = (cache && cache.suggested) || [];
+    if (!sug.length) return toast('nothing to suggest yet — play a few songs first');
+    const s = statLoad();
+    const played = new Set(
+      Object.values(s.tracks || {})
+        .filter((r) => r && r.plays && r.artistId)
+        .map((r) => r.artistId)
+    );
+    const fresh = sug.filter((a) => a.channelId && !played.has(a.channelId));
+    const pool = fresh.length ? fresh : sug; // already know all your suggestions? pick from them anyway
+    const pick = pool[(Math.random() * pool.length) | 0];
+    try {
+      const d = await getArtist(pick.channelId);
+      const name = d.name || pick.name;
+      quickPlayQueue((d.tracks || []).slice(0, 20), '🎲 Surprise me — ' + name, {
+        shuffle: true,
+        toast: '🎲 ' + name,
+        emptyMsg: 'no tracks for ' + name,
+      });
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+    }
+  }
+
+  async function qpDeepCuts() {
+    if (!state.authed) return toast('sign in first');
+    const top = topStatsArtists(5); // a few candidates in case #1 has nothing left unplayed
+    if (!top.length) return toast('play a few songs first so I know an artist to dig into');
+    const s = statLoad();
+    try {
+      for (const a of top) {
+        const d = await getArtist(a.channelId);
+        const unplayed = (d.tracks || []).filter(
+          (t) => t.videoId && !(s.tracks[t.videoId] && s.tracks[t.videoId].plays)
+        );
+        if (unplayed.length >= 5) {
+          const name = d.name || a.name;
+          return quickPlayQueue(unplayed, '⛏ Deep cuts — ' + name, {
+            shuffle: true,
+            toast: '⛏ deep cuts — ' + name,
+          });
+        }
+      }
+      toast("you've already heard everything from your top artists — try Surprise me instead");
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+    }
+  }
+
+  async function qpNewFromFavourites() {
+    if (!state.authed) return toast('sign in first');
+    toast('✨ checking your favourites…');
+    const cache = await ensureArtistsCache();
+    const favs = ((cache && cache.favourites) || []).slice(0, 8);
+    if (!favs.length) return toast('no favourite artists yet');
+    const year = String(new Date().getFullYear());
+    const found = [];
+    try {
+      for (const a of favs) {
+        if (found.length >= 2) break; // enough for a mix — cap the fan-out
+        let d;
+        try {
+          d = await getArtist(a.channelId);
+        } catch (_) {
+          continue;
+        }
+        for (const al of (d.albums || []).filter((x) => x.year === year)) {
+          try {
+            const full = await API.album(al.browseId);
+            if (full.tracks && full.tracks.length) found.push(...full.tracks);
+          } catch (_) {}
+          if (found.length >= 2) break;
+        }
+      }
+      quickPlayQueue(found, '✨ New from your favourites', {
+        toast: `✨ ${found.length} new track${found.length === 1 ? '' : 's'} from artists you play`,
+        emptyMsg: 'nothing new from your favourites this year',
+      });
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+    }
+  }
+
+  let moodCatsCache = null; // flat [{section,title,params}] — fetched once per session
+  async function qpGenreRoulette() {
+    if (!state.authed) return toast('sign in first');
+    try {
+      if (!moodCatsCache) moodCatsCache = await API.moodCategories();
+      if (!moodCatsCache.length) return toast('no mood/genre categories available');
+      // some categories' grids mix in a non-playlist tile ytmusicapi's parser
+      // can't handle (a 502 from /mood-playlists) — draw from a shrinking pool
+      // without replacement and just try another category rather than fail
+      // the whole spin on one bad pick
+      const pool = moodCatsCache.slice();
+      for (let tries = 0; tries < 6 && pool.length; tries++) {
+        const cat = pool.splice((Math.random() * pool.length) | 0, 1)[0];
+        toast('🎰 spinning — ' + cat.title + '…');
+        let playlists;
+        try {
+          playlists = await API.moodPlaylists(cat.params);
+        } catch (_) {
+          continue;
+        }
+        if (!playlists.length) continue;
+        const pl = playlists[(Math.random() * playlists.length) | 0];
+        let d;
+        try {
+          d = await API.playlist(pl.playlistId);
+        } catch (_) {
+          continue;
+        }
+        if (!d.tracks || !d.tracks.length) continue;
+        const name = d.title || pl.title || cat.title;
+        return quickPlayQueue(d.tracks, '🎰 ' + cat.title + ' — ' + name, {
+          toast: '🎰 ' + cat.title + ' → ' + name,
+        });
+      }
+      toast('roulette came up empty a few times — try again');
+    } catch (e) {
+      toast('roulette failed: ' + (e.message || e));
+    }
+  }
+
+  function quickPlayMenu(anchor) {
+    const items = [
+      { label: '🕘 Recently listened to', fn: qpRecentlyListened },
+      { label: '🔁 What I usually listen to', fn: qpUsualListen },
+      { label: '🎲 Surprise me', fn: qpSurpriseMe },
+      { label: '★ Liked Music, shuffled', fn: qpLikedShuffled },
+      { label: '⛏ Deep cuts', fn: qpDeepCuts },
+      { label: '↺ Give it another chance', fn: qpGiveAnotherChance },
+      { label: '📁 Local files, shuffled', fn: qpLocalShuffled },
+      { label: '✨ New from your favourites', fn: qpNewFromFavourites },
+      { label: '🎰 Genre / mood roulette', fn: qpGenreRoulette },
+    ];
+    const r = anchor.getBoundingClientRect();
+    showCtx({ clientX: r.left, clientY: r.bottom }, items);
+  }
+  if (el.qpBtn)
+    el.qpBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // don't let the document-click handler close it instantly
+      quickPlayMenu(el.qpBtn);
+    });
 
   // normalise a /video-search row into the same shape as a music track so it
   // can live in state.queue / session lists and play (audio) via RetroPlayer

@@ -1450,6 +1450,92 @@ group it appends is the exact same `appendAlbumGroup()` already proven above.
 
 ---
 
+## 5l. Quick play — nine one-click mixes (2026-09-18)
+
+`#tp-quickplay` (♫▾) sits in `.transport`, right before `#tp-shuffle` (below
+the volume slider, right side of the transport row). Click opens a `showCtx`
+flyout — same anchored-menu mechanism as the ARTIST MIX presets `▾` — listing
+nine entries. All funnel through one shared tail:
+
+```js
+quickPlayQueue(tracks, heading, { shuffle, toast, emptyMsg })
+```
+— replaces `state.queue`, drops radio (same rule as playing an artist/album:
+whichever action started this owns the queue tail), `renderTracks()`,
+`playAt(0)`. Nothing here needed a new panel or a new player mode — "mixing"
+is just picking which tracks go in the queue.
+
+**Local-stats-only (no fetch, instant)** — all read `statLoad()`'s
+`tracks{videoId: {title,artists,artistId,plays,skips,ms,first,last}}` fresh
+each click, not the module's own `stats` var (which only updates on flush):
+- **Recently listened to** — sort by `.last` desc, top 25.
+- **What I usually listen to** — sort by `.plays` desc (tiebreak `.ms`), top
+  25, shuffled (rank order every time felt robotic).
+- **Give it another chance** — tracks with `.skips > 0` (got cut short at
+  least once), sorted by skip count, shuffled. Nobody else surfaces this; it's
+  an honest use of data only this app's local stats tracking has.
+- **Local files, shuffled** — `localTracks` (imported files), as-is.
+
+`statTrackObj()` builds a bare `{videoId,title,artists,artistId}` from a stats
+record — no duration/thumbnail (stats never stored them). `ponytail:` the
+queue's "mm:ss left" footer under-counts these; upgrade path is a batched
+`/song` lookup per track, not worth the round trips for cosmetic polish.
+
+**Reuse existing fetches:**
+- **Liked Music, shuffled** — `API.playlist('LM')` (existing route, same one
+  the ★ favourites sidebar uses), shuffled.
+- **Surprise me** / **New from your favourites** — both go through
+  `ensureArtistsCache()` (awaits `loadArtists()` if `artistsCache` is still
+  null — up to ~3s poll — so a manual click racing the boot-time load doesn't
+  see an empty cache). *Surprise me* picks a random artist from
+  `artistsCache.suggested` (YTM's "similar to your top stats artists," already
+  computed for FOR YOU) that has **zero** plays in local stats — falls back to
+  the full suggested list if you've already got plays against everything
+  suggested — then `getArtist()` + shuffle. *New from your favourites* checks
+  `artistsCache.favourites` (library + top-played artists, top 8) for albums
+  whose `year` is the current year (via the `albums` field §5k added to
+  `/artist/<id>`), fetches those via `/album/<id>`, stops once it's collected
+  2 albums (fan-out cap — this one's the slowest, several sequential fetches).
+- **Deep cuts** — walks `topStatsArtists(5)` (existing helper, feeds FOR YOU's
+  merge too), for each fetches their full catalogue and filters to tracks with
+  **no** local plays; stops at the first artist with ≥5 unplayed tracks.
+
+**New capability — genre/mood roulette:**
+- `GET /mood-categories` (`server.py`) → `yt.get_mood_categories()` flattened
+  to `[{section,title,params}]` (36 categories as of testing: Moods & moments,
+  Genres, Decades, For you, …).
+- `GET /mood-playlists?params=` → `yt.get_mood_playlists(params)` → curated
+  playlist rows (`playlistId` works straight through the existing
+  `GET /playlist/<id>` route — no third endpoint needed to load tracks).
+- Client caches `/mood-categories` once per session (`moodCatsCache`), then on
+  each spin draws categories **without replacement** and tries up to **6**:
+  some categories' grids mix in a non-playlist tile that ytmusicapi's parser
+  can't handle (`Unable to find 'navigationEndpoint'...` — a 502 from
+  `/mood-playlists`), observed against live data at roughly a third of
+  categories. 3 tries still failed the whole spin ~40% of the time in testing;
+  6 dropped that to ~1-in-6 while keeping worst-case latency reasonable for a
+  manual "spin" click. A fully-exhausted spin fails gracefully (toast, queue
+  left untouched) rather than crashing — this is inherent to that category's
+  data shape, not a network flake, so it isn't going to self-heal with a
+  longer timeout.
+
+**Verified** against a live sidecar (real auth): `/mood-categories` →
+`/mood-playlists` → `/playlist/<id>` round-tripped correctly via curl (Chill →
+"Coffee Shop Blend" → 95 real tracks). End-to-end in a served page: the
+flyout's 9 labels confirmed correct; recently-listened / usual-listen / give-
+another-chance verified against seeded fake stats (correct sort, correct
+skip-only filter, all-tracks-included); local-files-shuffled's empty state
+toasts correctly; genre roulette run 6× post-fix succeeded 5/6 (the 6th failed
+cleanly). Liked Music, shuffled failed in this dev sandbox — but so does the
+**pre-existing, untouched** `GET /playlist/LM` route on its own (confirmed via
+a direct curl), so that's this dev `browser.json`'s account/auth state, not a
+regression. Surprise me / Deep cuts / New from favourites need a FOR YOU with
+real listening history to exercise (this sandbox's account has none) — not
+independently verified end-to-end, but built on the exact same `getArtist()` /
+`artistsCache` / `topStatsArtists()` machinery already proven elsewhere.
+
+---
+
 ## 7. Environment
 
 - Developed on Windows 10. **Now a git repo** (see §9 / README).

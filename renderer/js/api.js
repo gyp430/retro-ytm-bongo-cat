@@ -30,6 +30,8 @@ window.RetroAPI = (() => {
     videoSearch: (q) => j('/video-search?q=' + encodeURIComponent(q)),
     playlists: () => j('/playlists'),
     playlist: (id) => j('/playlist/' + encodeURIComponent(id)),
+    moodCategories: () => j('/mood-categories'),
+    moodPlaylists: (params) => j('/mood-playlists?params=' + encodeURIComponent(params)),
     librarySongs: () => j('/library-songs'),
     related: (vid) => j('/related/' + encodeURIComponent(vid)),
     home: () => j('/home'),

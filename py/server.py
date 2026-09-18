@@ -527,6 +527,56 @@ def playlist(pid):
     )
 
 
+@app.get("/mood-categories")
+def mood_categories():
+    """YTM's "Moods & Genres" browse categories, flattened to one list — the
+    quick-play "genre/mood roulette" entry picks a random one, then a random
+    playlist under it (/mood-playlists), then plays it via /playlist/<id>."""
+    if not require_auth():
+        return err("not authenticated", 401)
+    try:
+        sections = yt.get_mood_categories()
+    except Exception as exc:
+        traceback.print_exc()
+        return err(str(exc), 502)
+    out = []
+    for section, cats in (sections or {}).items():
+        for c in cats or []:
+            if c.get("params"):
+                out.append(
+                    {"section": section, "title": c.get("title"), "params": c.get("params")}
+                )
+    return jsonify(out)
+
+
+@app.get("/mood-playlists")
+def mood_playlists():
+    """The curated playlists under one /mood-categories entry — `params` comes
+    straight from that response. Rows are loaded like any other playlist via
+    the existing GET /playlist/<playlistId>."""
+    if not require_auth():
+        return err("not authenticated", 401)
+    params = (request.args.get("params") or "").strip()
+    if not params:
+        return err("missing params")
+    try:
+        res = yt.get_mood_playlists(params)
+    except Exception as exc:
+        traceback.print_exc()
+        return err(str(exc), 502)
+    return jsonify(
+        [
+            {
+                "playlistId": p.get("playlistId"),
+                "title": p.get("title"),
+                "thumbnail": (p.get("thumbnails") or [{}])[-1].get("url"),
+            }
+            for p in res
+            if p.get("playlistId")
+        ]
+    )
+
+
 @app.get("/library-songs")
 def library_songs():
     if not require_auth():

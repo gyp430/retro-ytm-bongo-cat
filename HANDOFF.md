@@ -1571,6 +1571,55 @@ playlist ("Contemporary Classical Guitar", 77 tracks) and started playback;
 "Sad", "Gaming", "Focus" all succeeded with different real playlists. No
 console errors throughout either round.
 
+**2026-09-18 — combine genre & moods (multi-select, up to 5).** User: "rock +
+punk + workout" — wanted to blend categories, not just pick one. YTM has no
+query for that (no per-track genre tags to intersect on), so this is a
+**union, not a filter**: pick up to 5 categories, pull one playlist from each,
+pool every track together, shuffle. Named honestly in the UI/toast as a
+blend, not a precise "songs that are all of these genres at once."
+
+New top-level quick-play entry `🎛 Combine genre & moods…  ▸`, right below
+`🎰 Genre / mood…  ▸`. Reuses the **exact same category submenu** (factored the
+section-grouping into `groupMoodCats()`, shared by both) but rows now toggle
+membership in `moodCombineSelected` (a `Set` of category objects, by
+reference — safe since `moodCatsCache` is a single persistent array both
+menus read from) and **redraw in place** instead of picking a playlist —
+`showCtx` has no native multi-select, so this just leans on the same
+close+reopen trick `qpGenreMenu` already used to hand off from the top-level
+menu: `renderMoodCombineMenu(anchor)` calls `showCtx` again with the updated
+checkmarks. A `✔ Combine & play (N selected)` row sits pinned at the top
+(`disabled` via `showCtx`'s existing support for that, while N is 0). Cap of
+`MOOD_COMBINE_MAX = 5` — past it, a toast, not a 6th checkmark.
+
+**Bug caught by testing, not assumed away:** `showCtx`'s item handler always
+calls `closeCtx()` *before* `it.fn()` runs — fine for every other menu (each
+item does one thing and the menu is meant to close), but the cap-blocked
+branch here was an early `return toast(...)` that skipped the
+`renderMoodCombineMenu()` re-open call, so hitting the cap silently closed
+the whole flyout instead of showing the warning and staying open. First live
+test showed `checked: []` right after the 6th click — looked like the
+Set had been wiped, actually the menu had just been torn down. Fixed by
+always calling `renderMoodCombineMenu()` at the end of the toggle handler,
+cap-blocked or not, toast-then-reopen instead of toast-then-nothing.
+
+`qpPlayCombinedMoods(cats)` fetches each selected category independently (own
+try/except per category, same up-to-4-tries-for-an-empty-playlist retry
+`qpPlayMoodCategory` already uses); a category that fails is just dropped
+from the blend rather than aborting the whole thing — the confirm toast says
+so (`… (some were unavailable)`) if not everything made it in. Entering the
+flow always resets `moodCombineSelected` to empty (abandoning a previous
+selection without confirming is a cancel, not a saved draft).
+
+**Verified** against a live sidecar (real auth): opened combine mode, toggled
+Workout/Rock/Metal/Jazz/Blues on one at a time (confirmed the menu stays
+open and the count updates after each click); hit the cap with a 6th
+(Pop/J-Pop) and — post-fix — confirmed the menu stays open with all 5 still
+checked and the correct toast, where pre-fix it silently closed; confirmed
+& played produced a real pooled, shuffled 297-track queue labelled "Workout +
+Rock + Metal + Jazz + Blues" and started playback; reopening the combine flow
+fresh afterward correctly showed 0 selected, not the previous 5. No console
+errors.
+
 Everything else from the original build (the other 8 entries) unchanged —
 see the original verification notes below.
 

@@ -3291,27 +3291,40 @@
     toast(`couldn't load a playlist from "${cat.title}" — try again`);
   }
 
-  // submenu of every mood/genre category, grouped by section (Genres, Moods &
-  // moments, Decades, For you, …) — same showCtx flyout the ARTIST MIX
-  // presets `▾` uses, just reopened in place of the quick-play menu itself.
-  async function qpGenreMenu(anchor) {
-    if (!state.authed) return toast('sign in first');
-    if (!moodCatsCache) {
-      toast('loading genres…');
-      try {
-        moodCatsCache = await API.moodCategories();
-      } catch (e) {
-        return toast('failed: ' + (e.message || e));
-      }
-    }
-    if (!moodCatsCache.length) return toast('no mood/genre categories available');
+  // group the cached flat category list by section (Genres, Moods & moments,
+  // Decades, For you, …), preserving the order sections were first seen in
+  const groupMoodCats = () => {
     const bySection = new Map();
     for (const c of moodCatsCache) {
       if (!bySection.has(c.section)) bySection.set(c.section, []);
       bySection.get(c.section).push(c);
     }
+    return bySection;
+  };
+  async function ensureMoodCats() {
+    if (moodCatsCache) return true;
+    toast('loading genres…');
+    try {
+      moodCatsCache = await API.moodCategories();
+    } catch (e) {
+      toast('failed: ' + (e.message || e));
+      return false;
+    }
+    if (!moodCatsCache.length) {
+      toast('no mood/genre categories available');
+      return false;
+    }
+    return true;
+  }
+
+  // submenu of every mood/genre category, grouped by section — same showCtx
+  // flyout the ARTIST MIX presets `▾` uses, just reopened in place of the
+  // quick-play menu itself.
+  async function qpGenreMenu(anchor) {
+    if (!state.authed) return toast('sign in first');
+    if (!(await ensureMoodCats())) return;
     const items = [];
-    for (const [section, cats] of bySection) {
+    for (const [section, cats] of groupMoodCats()) {
       if (items.length) items.push('-');
       items.push({ label: section });
       cats.forEach((c) =>
@@ -3320,6 +3333,88 @@
     }
     const r = anchor.getBoundingClientRect();
     showCtx({ clientX: r.left, clientY: r.bottom }, items);
+  }
+
+  // ---- combine genre/moods: multi-select up to 5, blend + shuffle --------
+  // Same category submenu as above, but a row toggles membership in
+  // moodCombineSelected and redraws in place (showCtx has no native
+  // multi-select — this just closes+reopens itself with updated checkmarks,
+  // the same trick qpGenreMenu already uses to hand off from the top-level
+  // quick-play menu) instead of picking a playlist immediately.
+  const MOOD_COMBINE_MAX = 5;
+  let moodCombineSelected = new Set();
+  function renderMoodCombineMenu(anchor) {
+    const items = [
+      {
+        label: `✔ Combine & play (${moodCombineSelected.size} selected)`,
+        disabled: moodCombineSelected.size === 0,
+        fn: () => qpPlayCombinedMoods([...moodCombineSelected]),
+      },
+      '-',
+    ];
+    for (const [section, cats] of groupMoodCats()) {
+      items.push({ label: section });
+      cats.forEach((c) => {
+        const on = moodCombineSelected.has(c);
+        items.push({
+          label: (on ? '☑ ' : '☐ ') + c.title,
+          fn: () => {
+            // showCtx already ran closeCtx() before this fn — always call
+            // renderMoodCombineMenu() below (even the blocked branch) or the
+            // menu stays closed instead of reopening with the warning shown
+            if (on) moodCombineSelected.delete(c);
+            else if (moodCombineSelected.size >= MOOD_COMBINE_MAX)
+              toast(`up to ${MOOD_COMBINE_MAX} at once`);
+            else moodCombineSelected.add(c);
+            renderMoodCombineMenu(anchor); // stays open — redraw with the new check state
+          },
+        });
+      });
+    }
+    const r = anchor.getBoundingClientRect();
+    showCtx({ clientX: r.left, clientY: r.bottom }, items);
+  }
+  async function qpCombineGenreMenu(anchor) {
+    if (!state.authed) return toast('sign in first');
+    if (!(await ensureMoodCats())) return;
+    moodCombineSelected = new Set(); // always start the flow fresh
+    renderMoodCombineMenu(anchor);
+  }
+  async function qpPlayCombinedMoods(cats) {
+    if (!cats.length) return toast('pick at least one category first');
+    toast('🎛 blending ' + cats.map((c) => c.title).join(' + ') + '…');
+    const picked = [];
+    const pooled = [];
+    for (const cat of cats) {
+      let playlists;
+      try {
+        playlists = await API.moodPlaylists(cat.params);
+      } catch (_) {
+        continue;
+      }
+      if (!playlists.length) continue;
+      const pool = playlists.slice();
+      for (let tries = 0; tries < 4 && pool.length; tries++) {
+        const pl = pool.splice((Math.random() * pool.length) | 0, 1)[0];
+        try {
+          const d = await API.playlist(pl.playlistId);
+          if (d.tracks && d.tracks.length) {
+            pooled.push(...d.tracks);
+            picked.push(cat.title);
+            break;
+          }
+        } catch (_) {
+          continue;
+        }
+      }
+    }
+    if (!pooled.length)
+      return toast('none of those categories could be loaded — try different ones');
+    const partial = picked.length < cats.length ? ' (some were unavailable)' : '';
+    quickPlayQueue(pooled, '🎛 ' + picked.join(' + '), {
+      shuffle: true,
+      toast: '🎛 blended ' + picked.join(' + ') + partial,
+    });
   }
 
   function quickPlayMenu(anchor) {
@@ -3333,6 +3428,7 @@
       { label: '📁 Local files, shuffled', fn: qpLocalShuffled },
       { label: '✨ New from your favourites', fn: qpNewFromFavourites },
       { label: '🎰 Genre / mood…  ▸', fn: () => qpGenreMenu(anchor) },
+      { label: '🎛 Combine genre & moods…  ▸', fn: () => qpCombineGenreMenu(anchor) },
     ];
     const r = anchor.getBoundingClientRect();
     showCtx({ clientX: r.left, clientY: r.bottom }, items);

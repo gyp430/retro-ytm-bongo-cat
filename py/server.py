@@ -28,6 +28,15 @@ try:
         get_authorization,
         sapisid_from_cookie,
     )
+    from ytmusicapi.navigation import (
+        nav,
+        SINGLE_COLUMN_TAB,
+        SECTION_LIST,
+        GRID_ITEMS,
+        CAROUSEL_CONTENTS,
+        MTRIR,
+    )
+    from ytmusicapi.parsers.browsing import parse_playlist
 except Exception:  # pragma: no cover
     print("ytmusicapi is not installed. Run:  npm run setup", file=sys.stderr)
     raise
@@ -549,6 +558,45 @@ def mood_categories():
     return jsonify(out)
 
 
+def _mood_playlists_lenient(params):
+    """Reimplements ytmusicapi's YTMusic.get_mood_playlists() by hand, one
+    difference: skip a grid tile that fails to parse instead of letting it
+    crash the whole category.
+
+    Some categories' grids mix in a tile that isn't actually a playlist (e.g.
+    "Metal" includes a featured-song tile — its title parses as a plain text
+    run, "Nothing Else Matters", with no navigationEndpoint/browseId, which is
+    exactly the shape parse_playlist() expects every grid item to have). The
+    library's parse_content_list() already skips items with the wrong
+    renderer *key*, but doesn't guard the parse *call* itself, so one
+    malformed-but-right-shaped tile takes out every real playlist in that
+    category with it. Reusing yt._send_request()/ytmusicapi's own nav() +
+    parse_playlist() here, not reimplementing the API call — only the
+    per-item try/except around parse_playlist() is new.
+    """
+    response = yt._send_request(
+        "browse", {"browseId": "FEmusic_moods_and_genres_category", "params": params}
+    )
+    playlists = []
+    for section in nav(response, SINGLE_COLUMN_TAB + SECTION_LIST):
+        if "gridRenderer" in section:
+            path = GRID_ITEMS
+        elif "musicCarouselShelfRenderer" in section:
+            path = CAROUSEL_CONTENTS
+        elif "musicImmersiveCarouselShelfRenderer" in section:
+            path = ["musicImmersiveCarouselShelfRenderer", "contents"]
+        else:
+            continue
+        for item in nav(section, path, True) or []:
+            if MTRIR not in item:
+                continue
+            try:
+                playlists.append(parse_playlist(item[MTRIR]))
+            except Exception:
+                continue  # one bad tile shouldn't sink the whole category
+    return playlists
+
+
 @app.get("/mood-playlists")
 def mood_playlists():
     """The curated playlists under one /mood-categories entry — `params` comes
@@ -560,7 +608,7 @@ def mood_playlists():
     if not params:
         return err("missing params")
     try:
-        res = yt.get_mood_playlists(params)
+        res = _mood_playlists_lenient(params)
     except Exception as exc:
         traceback.print_exc()
         return err(str(exc), 502)

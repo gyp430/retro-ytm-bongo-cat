@@ -1504,9 +1504,10 @@ queue's "mm:ss left" footer under-counts these; upgrade path is a batched
 - `GET /mood-categories` (`server.py`) → `yt.get_mood_categories()` flattened
   to `[{section,title,params}]` (39 categories as of testing, grouped under
   section names like Moods & moments, Genres, Decades, For you, …).
-- `GET /mood-playlists?params=` → `yt.get_mood_playlists(params)` → curated
-  playlist rows (`playlistId` works straight through the existing
-  `GET /playlist/<id>` route — no third endpoint needed to load tracks).
+- `GET /mood-playlists?params=` → curated playlist rows (`playlistId` works
+  straight through the existing `GET /playlist/<id>` route — no third
+  endpoint needed to load tracks). See **2026-09-18, root-cause fix** below —
+  this no longer calls `yt.get_mood_playlists()` directly.
 
 **2026-09-18 — the category itself is now a deliberate pick, not random.**
 First cut auto-rolled a category *and* a playlist inside it — user feedback:
@@ -1526,28 +1527,49 @@ reopens `showCtx` with new content in the same spot:
   part anyway) — retried across a shrinking pool up to 4 times if a specific
   playlist comes back empty (a single playlist can be individually
   unavailable, independent of the category).
-- **Deliberately no cross-category fallback on failure anymore** — the user
-  chose this category, so a failure reports
+- **Deliberately no cross-category fallback on failure** — the user chose
+  this category, so a failure reports
   `"<cat>" can't be loaded right now — try a different category` and leaves
   the current queue untouched, rather than silently substituting a different
-  category they didn't ask for. Confirmed live: `/mood-playlists` throws for
-  some categories (ytmusicapi's parser hits a grid tile without a
-  `navigationEndpoint` — a non-playlist tile mixed into that category's grid)
-  and it's **deterministic per category**, not a transient network blip —
-  "Bollywood & Indian" and "Classical" failed the same way on every retry in
-  testing, so retrying the identical request would never have helped; only
-  reopening the menu and picking a different category does.
+  category they didn't ask for.
 
-**Verified** against a live sidecar (real auth), this revision: opening the
-submenu renders the correct grouped structure (`[Moods & moments]` header +
-12 categories, `──`, `[Genres]` header + more — 39 rows total); reopening it
-is a cache hit (~150 ms, no re-fetch); picking "Chill" queued a real specific
+**2026-09-18, root-cause fix — "Metal" (and others) reliably failed.** User
+hit the exact failure predicted above in the *real, packaged* app: `"Metal"
+can't be loaded right now`. Traced it: `yt.get_mood_playlists()` calls
+`parse_content_list()`, which skips grid items with the wrong renderer *key*
+but does **not** guard the `parse_playlist()` *call* itself — so one
+right-shaped-but-malformed tile crashes the whole category. For "Metal" the
+culprit was a featured-song tile whose title parsed as a bare text run,
+`{'text': 'Nothing Else Matters'}`, with no `navigationEndpoint`/`browseId` —
+`parse_playlist()` expects every tile to have one.
+
+Fix: `_mood_playlists_lenient(params)` in `server.py` reimplements
+`get_mood_playlists()`'s traversal by hand — same `yt._send_request()` call,
+same `nav()`/`SINGLE_COLUMN_TAB`/`GRID_ITEMS`/`CAROUSEL_CONTENTS`/`MTRIR`
+constants and `parse_playlist()` from `ytmusicapi.navigation` /
+`ytmusicapi.parsers.browsing` — except each item's `parse_playlist()` call is
+now wrapped in its own `try/except`, skipping just the bad tile instead of
+losing the whole category. Reaches into `yt._send_request()` (an
+underscore-prefixed "internal" method) — same call the library itself makes
+here, but worth re-checking this still lines up if `ytmusicapi` gets bumped
+(`DEPS-AUDIT.md`).
+
+**Verified** against a live sidecar (real auth): reproduced the exact bug
+first (`curl` → 502, `Unable to find 'navigationEndpoint'... on {'text':
+'Nothing Else Matters'}`), then confirmed the fix — **all 36/36** mood/genre
+categories fetched successfully in a full sweep (previously "Metal",
+"Bollywood & Indian", and "Classical" all failed), and "Metal" specifically
+confirmed end-to-end in a served page: submenu → pick "Metal" → queued a
+real 66-track playlist ("Ballad Modern Metal Song") and started playing.
+
+Earlier revision's verification (submenu grouping, cache reuse, the no-
+fallback-on-failure UX) is unaffected by this fix and still holds: opening
+the submenu renders the correct grouped structure (`[Moods & moments]`
+header + 12 categories, `──`, `[Genres]` header + more); reopening it is a
+cache hit (~150 ms, no re-fetch); picking "Chill" queued a real specific
 playlist ("Contemporary Classical Guitar", 77 tracks) and started playback;
-"Sad", "Gaming", "Focus" all succeeded with different real playlists;
-"Bollywood & Indian" and "Classical" both hit the deterministic parser
-failure and showed the correct per-category error toast **without** touching
-the still-playing queue from the prior successful pick. No console errors
-throughout.
+"Sad", "Gaming", "Focus" all succeeded with different real playlists. No
+console errors throughout either round.
 
 Everything else from the original build (the other 8 entries) unchanged —
 see the original verification notes below.

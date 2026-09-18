@@ -1500,39 +1500,72 @@ queue's "mm:ss left" footer under-counts these; upgrade path is a batched
   merge too), for each fetches their full catalogue and filters to tracks with
   **no** local plays; stops at the first artist with ≥5 unplayed tracks.
 
-**New capability — genre/mood roulette:**
+**New capability — genre/mood picker** (revised 2026-09-18 — see below):
 - `GET /mood-categories` (`server.py`) → `yt.get_mood_categories()` flattened
-  to `[{section,title,params}]` (36 categories as of testing: Moods & moments,
-  Genres, Decades, For you, …).
+  to `[{section,title,params}]` (39 categories as of testing, grouped under
+  section names like Moods & moments, Genres, Decades, For you, …).
 - `GET /mood-playlists?params=` → `yt.get_mood_playlists(params)` → curated
   playlist rows (`playlistId` works straight through the existing
   `GET /playlist/<id>` route — no third endpoint needed to load tracks).
-- Client caches `/mood-categories` once per session (`moodCatsCache`), then on
-  each spin draws categories **without replacement** and tries up to **6**:
-  some categories' grids mix in a non-playlist tile that ytmusicapi's parser
-  can't handle (`Unable to find 'navigationEndpoint'...` — a 502 from
-  `/mood-playlists`), observed against live data at roughly a third of
-  categories. 3 tries still failed the whole spin ~40% of the time in testing;
-  6 dropped that to ~1-in-6 while keeping worst-case latency reasonable for a
-  manual "spin" click. A fully-exhausted spin fails gracefully (toast, queue
-  left untouched) rather than crashing — this is inherent to that category's
-  data shape, not a network flake, so it isn't going to self-heal with a
-  longer timeout.
 
-**Verified** against a live sidecar (real auth): `/mood-categories` →
+**2026-09-18 — the category itself is now a deliberate pick, not random.**
+First cut auto-rolled a category *and* a playlist inside it — user feedback:
+"I was honestly expecting that the genre/mood roulette would allow me to
+choose instead of going random." Now a two-step flyout, reusing `showCtx`
+exactly as the ARTIST MIX presets `▾` does — clicking a submenu item just
+reopens `showCtx` with new content in the same spot:
+- Top-level quick-play entry `🎰 Genre / mood…  ▸` → `qpGenreMenu(anchor)`:
+  fetches (and caches, `moodCatsCache`, once per session) `/mood-categories`,
+  groups by `section` (`Map`, insertion order), and reopens the flyout with a
+  non-clickable `{label: section}` header per group (`'-'` separator between
+  groups) — the same header/separator convention `trackMenu()`'s "Add to
+  list" already uses — followed by each category as a clickable row.
+- Picking a category → `qpPlayMoodCategory(cat)`: fetches that category's
+  playlists, then picks **one playlist at random** from within it (no
+  reasonable way to list 300+ playlist titles in a flyout, and that's the fun
+  part anyway) — retried across a shrinking pool up to 4 times if a specific
+  playlist comes back empty (a single playlist can be individually
+  unavailable, independent of the category).
+- **Deliberately no cross-category fallback on failure anymore** — the user
+  chose this category, so a failure reports
+  `"<cat>" can't be loaded right now — try a different category` and leaves
+  the current queue untouched, rather than silently substituting a different
+  category they didn't ask for. Confirmed live: `/mood-playlists` throws for
+  some categories (ytmusicapi's parser hits a grid tile without a
+  `navigationEndpoint` — a non-playlist tile mixed into that category's grid)
+  and it's **deterministic per category**, not a transient network blip —
+  "Bollywood & Indian" and "Classical" failed the same way on every retry in
+  testing, so retrying the identical request would never have helped; only
+  reopening the menu and picking a different category does.
+
+**Verified** against a live sidecar (real auth), this revision: opening the
+submenu renders the correct grouped structure (`[Moods & moments]` header +
+12 categories, `──`, `[Genres]` header + more — 39 rows total); reopening it
+is a cache hit (~150 ms, no re-fetch); picking "Chill" queued a real specific
+playlist ("Contemporary Classical Guitar", 77 tracks) and started playback;
+"Sad", "Gaming", "Focus" all succeeded with different real playlists;
+"Bollywood & Indian" and "Classical" both hit the deterministic parser
+failure and showed the correct per-category error toast **without** touching
+the still-playing queue from the prior successful pick. No console errors
+throughout.
+
+Everything else from the original build (the other 8 entries) unchanged —
+see the original verification notes below.
+
+**Original verification** (2026-09-18, first cut): `/mood-categories` →
 `/mood-playlists` → `/playlist/<id>` round-tripped correctly via curl (Chill →
 "Coffee Shop Blend" → 95 real tracks). End-to-end in a served page: the
 flyout's 9 labels confirmed correct; recently-listened / usual-listen / give-
 another-chance verified against seeded fake stats (correct sort, correct
 skip-only filter, all-tracks-included); local-files-shuffled's empty state
-toasts correctly; genre roulette run 6× post-fix succeeded 5/6 (the 6th failed
-cleanly). Liked Music, shuffled failed in this dev sandbox — but so does the
-**pre-existing, untouched** `GET /playlist/LM` route on its own (confirmed via
-a direct curl), so that's this dev `browser.json`'s account/auth state, not a
-regression. Surprise me / Deep cuts / New from favourites need a FOR YOU with
-real listening history to exercise (this sandbox's account has none) — not
-independently verified end-to-end, but built on the exact same `getArtist()` /
-`artistsCache` / `topStatsArtists()` machinery already proven elsewhere.
+toasts correctly. Liked Music, shuffled failed in this dev sandbox — but so
+does the **pre-existing, untouched** `GET /playlist/LM` route on its own
+(confirmed via a direct curl), so that's this dev `browser.json`'s
+account/auth state, not a regression. Surprise me / Deep cuts / New from
+favourites need a FOR YOU with real listening history to exercise (this
+sandbox's account has none) — not independently verified end-to-end, but
+built on the exact same `getArtist()` / `artistsCache` / `topStatsArtists()`
+machinery already proven elsewhere.
 
 ---
 

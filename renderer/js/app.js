@@ -3259,43 +3259,67 @@
   }
 
   let moodCatsCache = null; // flat [{section,title,params}] — fetched once per session
-  async function qpGenreRoulette() {
-    if (!state.authed) return toast('sign in first');
+
+  // picking a category is now deliberate (a submenu, below); only the
+  // playlist *within* that category is still a surprise — no reasonable way
+  // to list 300+ playlist titles in a flyout, and that's the fun part anyway.
+  // Retried across a shrinking pool: an individual playlist can be
+  // temporarily empty/unavailable independent of the category itself.
+  async function qpPlayMoodCategory(cat) {
+    toast('🎰 ' + cat.title + '…');
+    let playlists;
     try {
-      if (!moodCatsCache) moodCatsCache = await API.moodCategories();
-      if (!moodCatsCache.length) return toast('no mood/genre categories available');
-      // some categories' grids mix in a non-playlist tile ytmusicapi's parser
-      // can't handle (a 502 from /mood-playlists) — draw from a shrinking pool
-      // without replacement and just try another category rather than fail
-      // the whole spin on one bad pick
-      const pool = moodCatsCache.slice();
-      for (let tries = 0; tries < 6 && pool.length; tries++) {
-        const cat = pool.splice((Math.random() * pool.length) | 0, 1)[0];
-        toast('🎰 spinning — ' + cat.title + '…');
-        let playlists;
-        try {
-          playlists = await API.moodPlaylists(cat.params);
-        } catch (_) {
-          continue;
-        }
-        if (!playlists.length) continue;
-        const pl = playlists[(Math.random() * playlists.length) | 0];
-        let d;
-        try {
-          d = await API.playlist(pl.playlistId);
-        } catch (_) {
-          continue;
-        }
+      playlists = await API.moodPlaylists(cat.params);
+    } catch (e) {
+      return toast(`"${cat.title}" can't be loaded right now — try a different category`);
+    }
+    if (!playlists.length) return toast(`nothing under "${cat.title}" right now`);
+    const pool = playlists.slice();
+    for (let tries = 0; tries < 4 && pool.length; tries++) {
+      const pl = pool.splice((Math.random() * pool.length) | 0, 1)[0];
+      try {
+        const d = await API.playlist(pl.playlistId);
         if (!d.tracks || !d.tracks.length) continue;
         const name = d.title || pl.title || cat.title;
         return quickPlayQueue(d.tracks, '🎰 ' + cat.title + ' — ' + name, {
           toast: '🎰 ' + cat.title + ' → ' + name,
         });
+      } catch (_) {
+        continue;
       }
-      toast('roulette came up empty a few times — try again');
-    } catch (e) {
-      toast('roulette failed: ' + (e.message || e));
     }
+    toast(`couldn't load a playlist from "${cat.title}" — try again`);
+  }
+
+  // submenu of every mood/genre category, grouped by section (Genres, Moods &
+  // moments, Decades, For you, …) — same showCtx flyout the ARTIST MIX
+  // presets `▾` uses, just reopened in place of the quick-play menu itself.
+  async function qpGenreMenu(anchor) {
+    if (!state.authed) return toast('sign in first');
+    if (!moodCatsCache) {
+      toast('loading genres…');
+      try {
+        moodCatsCache = await API.moodCategories();
+      } catch (e) {
+        return toast('failed: ' + (e.message || e));
+      }
+    }
+    if (!moodCatsCache.length) return toast('no mood/genre categories available');
+    const bySection = new Map();
+    for (const c of moodCatsCache) {
+      if (!bySection.has(c.section)) bySection.set(c.section, []);
+      bySection.get(c.section).push(c);
+    }
+    const items = [];
+    for (const [section, cats] of bySection) {
+      if (items.length) items.push('-');
+      items.push({ label: section });
+      cats.forEach((c) =>
+        items.push({ label: '   ' + c.title, fn: () => qpPlayMoodCategory(c) })
+      );
+    }
+    const r = anchor.getBoundingClientRect();
+    showCtx({ clientX: r.left, clientY: r.bottom }, items);
   }
 
   function quickPlayMenu(anchor) {
@@ -3308,7 +3332,7 @@
       { label: '↺ Give it another chance', fn: qpGiveAnotherChance },
       { label: '📁 Local files, shuffled', fn: qpLocalShuffled },
       { label: '✨ New from your favourites', fn: qpNewFromFavourites },
-      { label: '🎰 Genre / mood roulette', fn: qpGenreRoulette },
+      { label: '🎰 Genre / mood…  ▸', fn: () => qpGenreMenu(anchor) },
     ];
     const r = anchor.getBoundingClientRect();
     showCtx({ clientX: r.left, clientY: r.bottom }, items);
